@@ -21,19 +21,20 @@ export const checkAuthorizedEmail = async (email) => {
 
 // Admin authentication (simple email/password check)
 export const authenticateAdmin = async (email, password) => {
-  try {
-    const adminRef = doc(db, 'admin', 'credentials');
-    const adminDoc = await getDoc(adminRef);
-    
-    if (adminDoc.exists()) {
-      const adminData = adminDoc.data();
-      return adminData.email === email && adminData.password === password;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error authenticating admin:', error);
-    return false;
-  }
+  try {
+    const adminRef = doc(db, 'admin', 'credentials');
+    const adminDoc = await getDoc(adminRef);
+    
+    if (adminDoc.exists()) {
+      const adminData = adminDoc.data();
+      // FIX: Compare both emails in lowercase to prevent case-sensitivity issues
+      return adminData.email.toLowerCase() === email.toLowerCase() && adminData.password === password;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error authenticating admin:', error);
+    return false;
+  }
 };
 
 // Get all authorized emails
