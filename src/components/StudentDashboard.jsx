@@ -148,10 +148,12 @@ const StudentDashboard = () => {
                             <Calendar className="w-4 h-4" />
                             <span>{lecture.date || 'No date'}</span>
                           </div>
-                          <Button size="sm" className="flex items-center space-x-2">
-                            <Play className="w-4 h-4" />
-                            <span>Watch</span>
-                          </Button>
+                          <a href={lecture.url} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" className="flex items-center space-x-2">
+                              <Play className="w-4 h-4" />
+                              <span>Watch</span>
+                            </Button>
+                          </a>
                         </div>
                       </CardContent>
                     </Card>
