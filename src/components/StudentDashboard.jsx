@@ -172,12 +172,13 @@ const StudentDashboard = () => {
             </section>
 
             {/* Lecture Materials Section */}
-            <a href={material.url} target="_blank" rel="noopener noreferrer">
-              <Button size="sm" variant="outline" className="flex items-center space-x-2">
-                <Download className="w-4 h-4" />
-                <span>Download</span>
-              </Button>
-            </a>
+            <section>
+              <div className="flex items-center space-x-2 mb-6">
+                <FileText className="w-6 h-6 text-blue-600" />
+                <h3 className="text-2xl font-bold text-slate-900">Lecture Materials</h3>
+                <Badge variant="secondary">{content.materials?.length || 0}</Badge>
+              </div>
+              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {content.materials && content.materials.length > 0 ? (
                   content.materials.map((material, index) => (
@@ -192,10 +193,12 @@ const StudentDashboard = () => {
                       <CardContent>
                         <div className="flex items-center justify-between">
                           <Badge variant="outline">{material.type || 'PDF'}</Badge>
-                          <Button size="sm" variant="outline" className="flex items-center space-x-2">
-                            <Download className="w-4 h-4" />
-                            <span>Download</span>
-                          </Button>
+                          <a href={material.url} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" variant="outline" className="flex items-center space-x-2">
+                              <Download className="w-4 h-4" />
+                              <span>Download</span>
+                            </Button>
+                          </a>
                         </div>
                       </CardContent>
                     </Card>
@@ -305,4 +308,3 @@ const StudentDashboard = () => {
 };
 
 export default StudentDashboard;
-
