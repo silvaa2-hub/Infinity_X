@@ -19,25 +19,22 @@ export const checkAuthorizedEmail = async (email) => {
   }
 };
 
-// Admin authentication (HARDCODED - NOT SECURE)
-import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
-
-// ... (باقي الأكواد في الملف)
-
-// Admin authentication using Firebase Auth
+// Admin authentication (simple email/password check)
 export const authenticateAdmin = async (email, password) => {
-  try {
-    const auth = getAuth();
-    // نحاول تسجيل الدخول باستخدام نظام Firebase
-    await signInWithEmailAndPassword(auth, email, password);
-
-    // إذا نجح تسجيل الدخول، نعتبره أدمن
-    return true; 
-  } catch (error) {
-    // إذا فشل (كلمة سر خاطئة، إلخ)، نعيد خطأ
-    console.error('Error authenticating admin with Firebase Auth:', error);
-    return false;
-  }
+  try {
+    const adminRef = doc(db, 'admin', 'credentials');
+    const adminDoc = await getDoc(adminRef);
+    
+    if (adminDoc.exists()) {
+      const adminData = adminDoc.data();
+      // FIX: Compare both emails in lowercase to prevent case-sensitivity issues
+      return adminData.email.toLowerCase() === email.toLowerCase() && adminData.password === password;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error authenticating admin:', error);
+    return false;
+  }
 };
 
 // Get all authorized emails
