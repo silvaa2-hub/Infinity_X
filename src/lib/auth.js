@@ -20,17 +20,23 @@ export const checkAuthorizedEmail = async (email) => {
 };
 
 // Admin authentication (HARDCODED - NOT SECURE)
-export const authenticateAdmin = async (email, password) => {
-  // --- ضع بيانات الدخول التي تريدها هنا ---
-  const ADMIN_EMAIL = "ahmedfarahatofficial@gmail.com";
-  const ADMIN_PASSWORD = "YourPassword123"; // اختر كلمة سر جديدة وقوية
-  // -----------------------------------------
+import { getAuth, signInWithEmailAndPassword } from "firebase/auth";
 
-  // نقارن البيانات المدخلة مع البيانات المثبتة في الكود
-  if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
-    return true; // نجح الدخول
-  } else {
-    return false; // فشل الدخول
+// ... (باقي الأكواد في الملف)
+
+// Admin authentication using Firebase Auth
+export const authenticateAdmin = async (email, password) => {
+  try {
+    const auth = getAuth();
+    // نحاول تسجيل الدخول باستخدام نظام Firebase
+    await signInWithEmailAndPassword(auth, email, password);
+
+    // إذا نجح تسجيل الدخول، نعتبره أدمن
+    return true; 
+  } catch (error) {
+    // إذا فشل (كلمة سر خاطئة، إلخ)، نعيد خطأ
+    console.error('Error authenticating admin with Firebase Auth:', error);
+    return false;
   }
 };
 
