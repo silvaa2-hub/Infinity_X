@@ -178,7 +178,6 @@ const StudentDashboard = () => {
                 <span>Download</span>
               </Button>
             </a>
-              
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 {content.materials && content.materials.length > 0 ? (
                   content.materials.map((material, index) => (
