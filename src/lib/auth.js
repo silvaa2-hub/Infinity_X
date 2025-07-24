@@ -19,22 +19,19 @@ export const checkAuthorizedEmail = async (email) => {
   }
 };
 
-// Admin authentication (simple email/password check)
+// Admin authentication (HARDCODED - NOT SECURE)
 export const authenticateAdmin = async (email, password) => {
-  try {
-    const adminRef = doc(db, 'admin', 'credentials');
-    const adminDoc = await getDoc(adminRef);
-    
-    if (adminDoc.exists()) {
-      const adminData = adminDoc.data();
-      // FIX: Compare both emails in lowercase to prevent case-sensitivity issues
-      return adminData.email.toLowerCase() === email.toLowerCase() && adminData.password === password;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error authenticating admin:', error);
-    return false;
-  }
+  // --- ضع بيانات الدخول التي تريدها هنا ---
+  const ADMIN_EMAIL = "ahmedfarahatofficial@gmail.com";
+  const ADMIN_PASSWORD = "YourPassword123"; // اختر كلمة سر جديدة وقوية
+  // -----------------------------------------
+
+  // نقارن البيانات المدخلة مع البيانات المثبتة في الكود
+  if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
+    return true; // نجح الدخول
+  } else {
+    return false; // فشل الدخول
+  }
 };
 
 // Get all authorized emails
