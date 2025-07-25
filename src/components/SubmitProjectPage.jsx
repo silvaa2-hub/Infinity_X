@@ -93,6 +93,15 @@ const SubmitProjectPage = () => {
   return (
     <div style={aiBackgroundStyle} className="min-h-screen text-slate-50 p-4 sm:p-6 lg:p-8">
       <div className="max-w-2xl mx-auto animate-in fade-in duration-500">
+        
+        {/* ======================= TEMPORARY DEBUG BLOCK ======================= */}
+        <div style={{ backgroundColor: 'yellow', color: 'black', padding: '10px', marginBottom: '20px', border: '2px solid red', fontFamily: 'monospace' }}>
+          <h3 style={{ fontWeight: 'bold' }}>DEBUG INFO - VERCEL VARIABLES:</h3>
+          <p>Cloud Name: "{import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}"</p>
+          <p>Upload Preset: "{import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET}"</p>
+        </div>
+        {/* ====================================================================== */}
+
         <Link to="/dashboard" className="inline-flex items-center text-slate-400 hover:text-white mb-8 transition-colors">
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
@@ -121,7 +130,7 @@ const SubmitProjectPage = () => {
               </div>
 
               <div 
-                className={`space-y-2 animate-in fade-in slide-in-from-bottom-6 duration-500 ${isDragging ? 'border-green-400' : 'border-slate-600'}`}
+                className={`space-y-2 animate-in fade-in slide-in-from-bottom-6 duration-500`}
                 onDragEnter={handleDragEnter}
                 onDragOver={handleDragEnter}
                 onDragLeave={handleDragLeave}
