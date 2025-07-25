@@ -1,7 +1,5 @@
 import { db } from './firebase';
-import { doc, getDoc, collection, getDocs, addDoc, deleteDoc, updateDoc } from 'firebase/firestore';
-
-// Check if email is authorized for student access
+import { doc, getDoc, collection, getDocs, addDoc, deleteDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';// Check if email is authorized for student access
 export const checkAuthorizedEmail = async (email) => {
   try {
     const authorizedEmailsRef = collection(db, 'authorizedEmails');
@@ -119,3 +117,62 @@ export const updateDashboardContent = async (content) => {
   }
 };
 
+// Add or update a student evaluation
+export const updateStudentEvaluation = async (evaluationData) => {
+  try {
+    // We use the student's email as the document ID
+    const evalRef = doc(db, 'evaluations', evaluationData.studentEmail);
+    // setDoc will create the document if it doesn't exist, or overwrite it if it does.
+    await setDoc(evalRef, evaluationData);
+    return true;
+  } catch (error) {
+    console.error('Error updating evaluation:', error);
+    return false;
+  }
+};
+// Get a single student's evaluation by their email
+export const getStudentEvaluation = async (email) => {
+  try {
+    if (!email) return null;
+
+    // The document ID is the student's email
+    const evalRef = doc(db, 'evaluations', email);
+    const evalDoc = await getDoc(evalRef);
+
+    if (evalDoc.exists()) {
+      return evalDoc.data();
+    }
+    return null; // No evaluation found for this student
+  } catch (error) {
+    console.error('Error getting student evaluation:', error);
+    return null;
+  }
+};
+
+// Save student feedback to Firestore
+export const submitLectureFeedback = async (feedbackData) => {
+  try {
+    const feedbackRef = collection(db, 'feedback');
+    await addDoc(feedbackRef, {
+      ...feedbackData,
+      submittedAt: serverTimestamp(), // Add a timestamp
+    });
+    return true;
+  } catch (error) {
+    console.error('Error submitting feedback:', error);
+    return false;
+  }
+};
+// Get all student feedback, sorted by newest first
+export const getAllFeedback = async () => {
+  try {
+    const feedbackRef = collection(db, 'feedback');
+    const snapshot = await getDocs(feedbackRef);
+    const allFeedback = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    // Sort by newest first
+    return allFeedback.sort((a, b) => b.submittedAt?.toMillis() - a.submittedAt?.toMillis());
+  } catch (error) {
+    console.error('Error getting all feedback:', error);
+    return [];
+  }
+};

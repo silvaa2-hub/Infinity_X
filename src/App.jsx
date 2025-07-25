@@ -5,6 +5,9 @@ import LoginPage from './components/LoginPage';
 import StudentDashboard from './components/StudentDashboard';
 import AdminPanel from './components/AdminPanel';
 import AdminLogin from './components/AdminLogin';
+import MyEvaluationsPage from './components/MyEvaluationsPage';
+import SubmitProjectPage from './components/SubmitProjectPage'; // New import
+import FeedbackPage from './components/FeedbackPage';
 import './App.css';
 
 // Protected Route Component for Students
@@ -42,6 +45,24 @@ const AppRoutes = () => {
         } 
       />
       <Route 
+        path="/my-evaluation" 
+        element={
+          <ProtectedStudentRoute>
+            <MyEvaluationsPage />
+          </ProtectedStudentRoute>
+        } 
+      />
+      {/* --- ADDED NEW ROUTE --- */}
+      <Route 
+        path="/submit-project" 
+        element={
+          <ProtectedStudentRoute>
+            <SubmitProjectPage />
+          </ProtectedStudentRoute>
+        } 
+      />
+      {/* -------------------- */}
+      <Route 
         path="/admin/login" 
         element={
           user && isAdmin ? <Navigate to="/admin" /> : <AdminLogin />
@@ -55,7 +76,16 @@ const AppRoutes = () => {
           </ProtectedAdminRoute>
         } 
       />
+      <Route 
+        path="/feedback" 
+        element={
+          <ProtectedStudentRoute>
+            <FeedbackPage />
+          </ProtectedStudentRoute>
+        } 
+      />
       <Route path="*" element={<Navigate to="/" />} />
+      
     </Routes>
   );
 };
@@ -73,4 +103,3 @@ function App() {
 }
 
 export default App;
-
