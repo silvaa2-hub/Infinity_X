@@ -9,7 +9,8 @@ import {
   getDashboardContent,
   updateDashboardContent,
   updateStudentEvaluation,
-  getAllFeedback // Add this line
+  getAllFeedback,
+  deleteSubmission // Add this line
 } from '../lib/auth';
 import GoogleDriveSync from './GoogleDriveSync';
 import { Button } from '@/components/ui/button';
@@ -285,6 +286,19 @@ const loadData = async () => {
     }
     setLoading(false);
   };
+  const handleDeleteSubmission = async (submissionId) => {
+  if (window.confirm("Are you sure you want to delete this submission?")) {
+    setLoading(true);
+    const success = await deleteSubmission(submissionId);
+    if (success) {
+      showMessage('Submission deleted successfully!');
+      await loadData(); // Reload the list
+    } else {
+      showMessage('Failed to delete submission.', true);
+    }
+    setLoading(false);
+  }
+};
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-red-50">
@@ -467,41 +481,37 @@ const loadData = async () => {
             </Card>
           </TabsContent>
           {/* NEW Submissions Management Content */}
-          <TabsContent value="submissions" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center space-x-2">
-                  <Briefcase className="w-5 h-5" />
-                  <span>Project Submissions</span>
-                </CardTitle>
-                <CardDescription>
-                  Review and download projects submitted by students.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
-                  {submissions.length > 0 ? submissions.sort((a, b) => b.submittedAt?.toMillis() - a.submittedAt?.toMillis()).map((sub) => (
-                    <div key={sub.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                      <div>
-                        <p className="font-medium">{sub.projectName}</p>
-                        <p className="text-sm text-slate-500">{sub.studentEmail}</p>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Submitted: {sub.submittedAt ? new Date(sub.submittedAt.toDate()).toLocaleString() : 'N/A'}
-                        </p>
-                      </div>
-                      <a href={sub.fileUrl} target="_blank" rel="noopener noreferrer">
-                        <Button variant="outline" size="sm">
-                          Download File
-                        </Button>
-                      </a>
-                    </div>
-                  )) : (
-                    <p className="text-slate-500 text-center py-8">No projects have been submitted yet.</p>
-                  )}
+          <div className="space-y-2">
+            {submissions.length > 0 ? submissions.map((sub) => (
+              <div key={sub.id} className="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                <div>
+                  <p className="font-medium">{sub.projectName}</p>
+                  <p className="text-sm text-slate-500">{sub.studentEmail}</p>
+                  <p className="text-xs text-slate-400 mt-1">
+                    Submitted: {sub.submittedAt ? new Date(sub.submittedAt.toDate()).toLocaleString() : 'N/A'}
+                  </p>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                <div className="flex items-center space-x-2">
+                  <a href={sub.fileUrl} target="_blank" rel="noopener noreferrer">
+                    <Button variant="outline" size="sm">
+                      Download File
+                    </Button>
+                  </a>
+                  {/* New Delete Button */}
+                  <Button 
+                    variant="destructive" 
+                    size="sm" 
+                    onClick={() => handleDeleteSubmission(sub.id)}
+                    disabled={loading}
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </Button>
+                </div>
+              </div>
+            )) : (
+              <p className="text-slate-500 text-center py-8">No projects have been submitted yet.</p>
+            )}
+          </div>
           {/* NEW Feedback Management Content */}
           <TabsContent value="feedback" className="space-y-6">
             <Card>

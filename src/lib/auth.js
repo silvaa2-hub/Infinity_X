@@ -176,3 +176,14 @@ export const getAllFeedback = async () => {
     return [];
   }
 };
+// Delete a project submission
+export const deleteSubmission = async (submissionId) => {
+  try {
+    const subRef = doc(db, 'submissions', submissionId);
+    await deleteDoc(subRef);
+    return true;
+  } catch (error) {
+    console.error('Error deleting submission:', error);
+    return false;
+  }
+};
