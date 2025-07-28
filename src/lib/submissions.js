@@ -1,36 +1,29 @@
 import { db } from './firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 
-// This function now uploads the file using the secure signature from our backend
-export const uploadFileWithSignature = async (file) => {
+// Simple, direct "unsigned" upload to Cloudinary
+export const uploadFileToCloudinary = async (file) => {
+  const url = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/upload`;
+
+  const formData = new FormData();
+  formData.append('file', file);
+  formData.append('upload_preset', import.meta.env.VITE_CLOUDINARY_UPLOAD_PRESET);
+
   try {
-    // 1. Get the signature from our Vercel backend function
-    const signatureResponse = await fetch('/api/sign-upload');
-    const { signature, timestamp } = await signatureResponse.json();
-
-    // 2. Prepare the form data for Cloudinary
-    const formData = new FormData();
-    formData.append('file', file);
-    formData.append('timestamp', timestamp);
-    formData.append('signature', signature);
-    formData.append('api_key', import.meta.env.VITE_CLOUDINARY_API_KEY); // We need a public API key for this part
-
-    const url = `https://api.cloudinary.com/v1_1/${import.meta.env.VITE_CLOUDINARY_CLOUD_NAME}/upload`;
-
-    // 3. Send the file to Cloudinary
     const response = await fetch(url, {
       method: 'POST',
       body: formData,
     });
     const data = await response.json();
-
     if (data.secure_url) {
       return data.secure_url;
     } else {
-      throw new Error('Upload to Cloudinary failed after signing.');
+      // Log the full error from Cloudinary if it fails
+      console.error('Cloudinary upload error:', data);
+      throw new Error('File upload to Cloudinary failed.');
     }
   } catch (error) {
-    console.error('Error uploading with signature:', error);
+    console.error('Error in uploadFileToCloudinary:', error);
     return null;
   }
 };

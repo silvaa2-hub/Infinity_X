@@ -1,6 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { uploadFileWithSignature, saveSubmissionToFirestore } from '../lib/submissions'; // Ensure this is the correct import
+import { uploadFileToCloudinary, saveSubmissionToFirestore } from '../lib/submissions';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -10,6 +10,7 @@ import { ArrowLeft, UploadCloud, Loader2, FileCheck2, X } from 'lucide-react';
 
 const SubmitProjectPage = () => {
   const { user } = useAuth();
+  const fileInputRef = useRef(null);
   const [projectName, setProjectName] = useState('');
   const [projectFile, setProjectFile] = useState(null);
   const [loading, setLoading] = useState(false);
@@ -40,8 +41,7 @@ const SubmitProjectPage = () => {
     setMessage('');
 
     try {
-      // Use the secure upload function
-      const fileUrl = await uploadFileWithSignature(projectFile);
+      const fileUrl = await uploadFileToCloudinary(projectFile);
 
       if (fileUrl) {
         const submissionDetails = {
@@ -50,12 +50,15 @@ const SubmitProjectPage = () => {
           fileUrl: fileUrl,
         };
         const success = await saveSubmissionToFirestore(submissionDetails);
-
+        
         if (success) {
           setMessage('Your project has been submitted successfully!');
           setProjectName('');
           setProjectFile(null);
-          document.getElementById('projectFile').value = '';
+          // Use the ref to safely clear the file input
+          if (fileInputRef.current) {
+            fileInputRef.current.value = '';
+          }
         } else {
           setError('Failed to save your submission details. Please try again.');
         }
@@ -82,7 +85,7 @@ const SubmitProjectPage = () => {
           <ArrowLeft className="w-4 h-4 mr-2" />
           Back to Dashboard
         </Link>
-
+        
         <Card className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white">
           <CardHeader className="text-center">
             <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-r from-green-600 to-teal-600 rounded-lg mb-4 shadow-lg">
@@ -120,7 +123,7 @@ const SubmitProjectPage = () => {
                             <p className="mb-2 text-sm text-slate-400"><span className="font-semibold">Click to upload</span> or drag and drop</p>
                             <p className="text-xs text-slate-500">PDF, ZIP, DOCX, etc.</p>
                         </div>
-                        <Input id="projectFile" type="file" className="hidden" onChange={handleFileChange} disabled={loading} />
+                        <Input ref={fileInputRef} id="projectFile" type="file" className="hidden" onChange={handleFileChange} disabled={loading} />
                     </label>
                 ) : (
                     <div className="flex items-center justify-between w-full p-4 border-2 border-solid border-green-500 bg-green-900/30 rounded-lg">
@@ -128,7 +131,7 @@ const SubmitProjectPage = () => {
                             <FileCheck2 className="w-6 h-6 text-green-400" />
                             <span className="text-sm text-slate-300">{projectFile.name}</span>
                         </div>
-                        <Button variant="ghost" size="icon" onClick={() => { setProjectFile(null); document.getElementById('projectFile').value = ''; }} disabled={loading}>
+                        <Button variant="ghost" size="icon" onClick={() => { setProjectFile(null); if (fileInputRef.current) { fileInputRef.current.value = ''; } }} disabled={loading}>
                             <X className="w-4 h-4" />
                         </Button>
                     </div>
