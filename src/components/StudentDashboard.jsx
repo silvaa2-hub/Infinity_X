@@ -77,41 +77,55 @@ const StudentDashboard = () => {
     <div style={aiBackgroundStyle} className="min-h-screen text-slate-50">
       {/* Header */}
       <header className="bg-slate-900/80 backdrop-blur-md shadow-sm border-b border-slate-700/50 sticky top-0 z-10">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-3">
-                <div className="w-10 h-10 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
-                  <Brain className="w-6 h-6 text-white" />
+            {/* Left side - Logo and title */}
+            <div className="flex items-center space-x-2 sm:space-x-4 min-w-0 flex-1">
+              <div className="flex items-center space-x-2 sm:space-x-3 min-w-0">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 bg-gradient-to-r from-purple-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg flex-shrink-0">
+                  <Brain className="w-4 h-4 sm:w-6 sm:h-6 text-white" />
                 </div>
-                <div>
-                  <h1 className="text-xl font-bold text-white">AI Diploma Portal</h1>
-                  <p className="text-sm text-slate-400 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3 text-purple-400" />
-                    Powered by InfinityX
+                <div className="min-w-0 flex-1">
+                  <h1 className="text-base sm:text-xl font-bold text-white truncate">AI Diploma Portal</h1>
+                  <p className="text-xs sm:text-sm text-slate-400 flex items-center gap-1 truncate">
+                    <Sparkles className="w-2 h-2 sm:w-3 sm:h-3 text-purple-400 flex-shrink-0" />
+                    <span className="truncate">Powered by InfinityX</span>
                   </p>
                 </div>
               </div>
             </div>
             
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
+            {/* Right side - User info and actions */}
+            <div className="flex items-center space-x-2 sm:space-x-4 flex-shrink-0">
+              {/* User email - hidden on small screens */}
+              <div className="hidden md:flex items-center space-x-2">
                 <User className="w-4 h-4 text-slate-400" />
-                <span className="text-sm text-slate-300 font-medium">{user?.email}</span>
+                <span className="text-sm text-slate-300 font-medium truncate max-w-32 lg:max-w-none">{user?.email}</span>
               </div>
-              <Button onClick={logout} variant="outline" size="sm" className="flex items-center space-x-2 bg-slate-800 border-slate-600 hover:bg-slate-700 hover:text-white">
-                <LogOut className="w-4 h-4" />
-                <span>Logout</span>
+              
+              {/* Logout button - responsive */}
+              <Button 
+                onClick={logout} 
+                variant="outline" 
+                size="sm" 
+                className="flex items-center space-x-1 sm:space-x-2 bg-slate-800 border-slate-600 hover:bg-slate-700 hover:text-white text-xs sm:text-sm px-2 sm:px-3"
+              >
+                <LogOut className="w-3 h-3 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">Logout</span>
               </Button>
 
-              {/* NEW NAVIGATION MENU */}
+              {/* Navigation menu */}
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="icon" className="bg-slate-800 border-slate-600 hover:bg-slate-700 hover:text-white">
-                    <Menu className="h-4 w-4" />
+                  <Button 
+                    variant="outline" 
+                    size="sm" 
+                    className="bg-slate-800 border-slate-600 hover:bg-slate-700 hover:text-white p-2"
+                  >
+                    <Menu className="h-3 w-3 sm:h-4 sm:w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent className="w-56 bg-slate-800 border-slate-700 text-slate-50">
+                <DropdownMenuContent className="w-56 bg-slate-800 border-slate-700 text-slate-50" align="end">
                   <DropdownMenuItem asChild>
                     <Link to="/submit-project" className="flex items-center cursor-pointer">
                       <UploadCloud className="mr-2 h-4 w-4" />
@@ -132,64 +146,82 @@ const StudentDashboard = () => {
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
-
             </div>
           </div>
         </div>
       </header>
 
       {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
-          <h2 className="text-3xl font-bold text-white mb-2">Welcome back! 👋</h2>
-          <p className="text-slate-400">Continue your AI learning journey. Access your lectures, materials, and resources below.</p>
+      <main className="max-w-7xl mx-auto px-3 sm:px-6 lg:px-8 py-4 sm:py-8">
+        {/* Welcome section */}
+        <div className="mb-6 sm:mb-8 animate-in fade-in slide-in-from-top-4 duration-500">
+          <h2 className="text-2xl sm:text-3xl font-bold text-white mb-2">Welcome back! 👋</h2>
+          <p className="text-slate-400 text-sm sm:text-base">Continue your AI learning journey. Access your lectures, materials, and resources below.</p>
         </div>
 
-        {/* REMOVED the submit project button from here */}
-
+        {/* Tabs */}
         <Tabs defaultValue="lectures" className="w-full animate-in fade-in slide-in-from-top-8 duration-500">
-          <TabsList className="bg-slate-800/50 border border-slate-700">
-            <TabsTrigger value="lectures" className="flex items-center space-x-2 text-slate-300">
-              <Video className="w-4 h-4" />
-              <span>Recorded Lectures</span>
+          {/* Tab List - Responsive */}
+          <TabsList className="bg-slate-800/50 border border-slate-700 w-full grid grid-cols-2 sm:grid-cols-4 gap-1 h-auto p-1">
+            <TabsTrigger 
+              value="lectures" 
+              className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 text-slate-300 py-2 px-1 text-xs sm:text-sm"
+            >
+              <Video className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center leading-tight">Recorded<br className="sm:hidden" /> Lectures</span>
             </TabsTrigger>
-            <TabsTrigger value="materials" className="flex items-center space-x-2 text-slate-300">
-              <FileText className="w-4 h-4" />
-              <span>Lecture Materials</span>
+            <TabsTrigger 
+              value="materials" 
+              className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 text-slate-300 py-2 px-1 text-xs sm:text-sm"
+            >
+              <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center leading-tight">Lecture<br className="sm:hidden" /> Materials</span>
             </TabsTrigger>
-            <TabsTrigger value="links" className="flex items-center space-x-2 text-slate-300">
-              <ExternalLink className="w-4 h-4" />
-              <span>Important Links</span>
+            <TabsTrigger 
+              value="links" 
+              className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 text-slate-300 py-2 px-1 text-xs sm:text-sm"
+            >
+              <ExternalLink className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center leading-tight">Important<br className="sm:hidden" /> Links</span>
             </TabsTrigger>
-            <TabsTrigger value="notes" className="flex items-center space-x-2 text-slate-300">
-              <StickyNote className="w-4 h-4" />
-              <span>Instructor Notes</span>
+            <TabsTrigger 
+              value="notes" 
+              className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 text-slate-300 py-2 px-1 text-xs sm:text-sm"
+            >
+              <StickyNote className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center leading-tight">Instructor<br className="sm:hidden" /> Notes</span>
             </TabsTrigger>
-             {/* REMOVED the evaluation tab from here */}
           </TabsList>
 
-          <TabsContent value="lectures" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Lectures Tab */}
+          <TabsContent value="lectures" className="mt-4 sm:mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {content.lectures && content.lectures.length > 0 ? (
                 content.lectures.map((lecture, index) => (
-                  <Card key={index} className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white hover:border-slate-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-4" style={{animationDelay: `${index * 100}ms`}}>
-                    <CardHeader className="pb-3">
-                      <div className="flex items-start justify-between">
-                        <div className="flex-1">
-                          <CardTitle className="text-lg text-slate-50">{lecture.title}</CardTitle>
-                          <CardDescription className="mt-1 text-slate-400">{lecture.description}</CardDescription>
+                  <Card 
+                    key={index} 
+                    className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white hover:border-slate-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-4" 
+                    style={{animationDelay: `${index * 100}ms`}}
+                  >
+                    <CardHeader className="pb-3 p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between space-y-2 sm:space-y-0">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg text-slate-50 break-words">{lecture.title}</CardTitle>
+                          <CardDescription className="mt-1 text-slate-400 text-sm break-words">{lecture.description}</CardDescription>
                         </div>
-                        <Badge variant="outline" className="ml-2 border-slate-600 text-slate-300">{lecture.duration || 'N/A'}</Badge>
+                        <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs self-start sm:ml-2 flex-shrink-0">
+                          {lecture.duration || 'N/A'}
+                        </Badge>
                       </div>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
+                    <CardContent className="p-4 sm:p-6 pt-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
                         <div className="flex items-center space-x-2 text-sm text-slate-400">
-                          <Calendar className="w-4 h-4" />
-                          <span>{lecture.date || 'No date'}</span>
+                          <Calendar className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">{lecture.date || 'No date'}</span>
                         </div>
-                        <a href={lecture.url} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" className="flex items-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white">
+                        <a href={lecture.url} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+                          <Button size="sm" className="flex items-center justify-center space-x-2 bg-indigo-600 hover:bg-indigo-700 text-white w-full sm:w-auto">
                             <Play className="w-4 h-4" />
                             <span>Watch</span>
                           </Button>
@@ -199,34 +231,41 @@ const StudentDashboard = () => {
                   </Card>
                 ))
               ) : (
-                <Card className="md:col-span-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800">
-                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <Video className="w-12 h-12 text-slate-600 mb-4" />
-                    <h3 className="text-lg font-semibold text-slate-300">No Lectures Available</h3>
-                    <p className="text-slate-500">New lectures will be added soon. Please check back later!</p>
+                <Card className="lg:col-span-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800">
+                  <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center p-4">
+                    <Video className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mb-4" />
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-300">No Lectures Available</h3>
+                    <p className="text-slate-500 text-sm sm:text-base">New lectures will be added soon. Please check back later!</p>
                   </CardContent>
                 </Card>
               )}
             </div>
           </TabsContent>
 
-          <TabsContent value="materials" className="mt-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {/* Materials Tab */}
+          <TabsContent value="materials" className="mt-4 sm:mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
               {content.materials && content.materials.length > 0 ? (
                 content.materials.map((material, index) => (
-                  <Card key={index} className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white hover:border-slate-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-4" style={{animationDelay: `${index * 100}ms`}}>
-                    <CardHeader className="pb-3">
-                      <CardTitle className="text-lg flex items-center space-x-2 text-slate-50">
-                        <BookOpen className="w-5 h-5 text-blue-400" />
-                        <span>{material.title}</span>
+                  <Card 
+                    key={index} 
+                    className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white hover:border-slate-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-4" 
+                    style={{animationDelay: `${index * 100}ms`}}
+                  >
+                    <CardHeader className="pb-3 p-4 sm:p-6">
+                      <CardTitle className="text-base sm:text-lg flex items-center space-x-2 text-slate-50 break-words">
+                        <BookOpen className="w-4 h-4 sm:w-5 sm:h-5 text-blue-400 flex-shrink-0" />
+                        <span className="min-w-0">{material.title}</span>
                       </CardTitle>
-                      <CardDescription className="text-slate-400">{material.description}</CardDescription>
+                      <CardDescription className="text-slate-400 text-sm break-words">{material.description}</CardDescription>
                     </CardHeader>
-                    <CardContent>
-                      <div className="flex items-center justify-between">
-                        <Badge variant="outline" className="border-slate-600 text-slate-300">{material.type || 'PDF'}</Badge>
-                        <a href={material.url} target="_blank" rel="noopener noreferrer">
-                          <Button size="sm" variant="outline" className="flex items-center space-x-2 bg-slate-800 border-slate-600 hover:bg-slate-700">
+                    <CardContent className="p-4 sm:p-6 pt-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+                        <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs self-start">
+                          {material.type || 'PDF'}
+                        </Badge>
+                        <a href={material.url} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+                          <Button size="sm" variant="outline" className="flex items-center justify-center space-x-2 bg-slate-800 border-slate-600 hover:bg-slate-700 w-full sm:w-auto">
                             <Download className="w-4 h-4" />
                             <span>Download</span>
                           </Button>
@@ -236,29 +275,37 @@ const StudentDashboard = () => {
                   </Card>
                 ))
               ) : (
-                <Card className="md:col-span-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800">
-                  <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-                    <FileText className="w-12 h-12 text-slate-600 mb-4" />
-                    <h3 className="text-lg font-semibold text-slate-300">No Materials Available</h3>
-                    <p className="text-slate-500">Course materials will appear here as they are released.</p>
+                <Card className="lg:col-span-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800">
+                  <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center p-4">
+                    <FileText className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mb-4" />
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-300">No Materials Available</h3>
+                    <p className="text-slate-500 text-sm sm:text-base">Course materials will appear here as they are released.</p>
                   </CardContent>
                 </Card>
               )}
             </div>
           </TabsContent>
 
-          <TabsContent value="links" className="mt-6">
+          {/* Links Tab */}
+          <TabsContent value="links" className="mt-4 sm:mt-6">
             <Card className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white">
-              <CardContent className="p-4">
+              <CardContent className="p-3 sm:p-4">
                 {content.links && content.links.length > 0 ? (
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {content.links.map((link, index) => (
                       <div key={index}>
-                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors group">
-                          <ExternalLink className="w-5 h-5 text-green-400" />
-                          <div className="flex-1">
-                            <p className="font-medium text-slate-50 group-hover:text-green-400">{link.title}</p>
-                            {link.description && (<p className="text-sm text-slate-400">{link.description}</p>)}
+                        <a 
+                          href={link.url} 
+                          target="_blank" 
+                          rel="noopener noreferrer" 
+                          className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors group"
+                        >
+                          <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0" />
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-slate-50 group-hover:text-green-400 text-sm sm:text-base break-words">{link.title}</p>
+                            {link.description && (
+                              <p className="text-xs sm:text-sm text-slate-400 break-words">{link.description}</p>
+                            )}
                           </div>
                         </a>
                         {index < content.links.length - 1 && <Separator className="bg-slate-700" />}
@@ -266,30 +313,31 @@ const StudentDashboard = () => {
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-8">
-                    <ExternalLink className="w-8 h-8 text-slate-600 mx-auto mb-3" />
-                    <h3 className="text-lg font-semibold text-slate-300">No Links Available</h3>
-                    <p className="text-slate-500">Important links will be posted here.</p>
+                  <div className="text-center py-6 sm:py-8">
+                    <ExternalLink className="w-6 h-6 sm:w-8 sm:h-8 text-slate-600 mx-auto mb-3" />
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-300">No Links Available</h3>
+                    <p className="text-slate-500 text-sm sm:text-base">Important links will be posted here.</p>
                   </div>
                 )}
               </CardContent>
             </Card>
           </TabsContent>
 
-          <TabsContent value="notes" className="mt-6">
-            <div className="space-y-4">
+          {/* Notes Tab */}
+          <TabsContent value="notes" className="mt-4 sm:mt-6">
+            <div className="space-y-3 sm:space-y-4">
               {content.notes && content.notes.length > 0 ? (
                 content.notes.map((note, index) => (
                   <Card key={index} className="overflow-hidden bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white">
-                    <div className="p-4 bg-amber-900/10 border-l-4 border-amber-500">
+                    <div className="p-3 sm:p-4 bg-amber-900/10 border-l-4 border-amber-500">
                       <div className="flex items-start space-x-3">
-                        <StickyNote className="w-5 h-5 text-amber-500 mt-0.5" />
-                        <div className="flex-1">
-                          <h4 className="font-medium text-slate-50 mb-1">{note.title}</h4>
-                          <p className="text-sm text-slate-300">{note.content}</p>
+                        <StickyNote className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                        <div className="flex-1 min-w-0">
+                          <h4 className="font-medium text-slate-50 mb-1 text-sm sm:text-base break-words">{note.title}</h4>
+                          <p className="text-xs sm:text-sm text-slate-300 break-words leading-relaxed">{note.content}</p>
                           {note.date && (
                             <div className="flex items-center space-x-1 mt-2 text-xs text-slate-400">
-                              <Clock className="w-3 h-3" />
+                              <Clock className="w-3 h-3 flex-shrink-0" />
                               <span>{note.date}</span>
                             </div>
                           )}
@@ -300,10 +348,10 @@ const StudentDashboard = () => {
                 ))
               ) : (
                 <Card className="bg-slate-900/50 backdrop-blur-sm border border-slate-800">
-                  <CardContent className="text-center py-12">
-                    <StickyNote className="w-8 h-8 text-slate-600 mx-auto mb-3" />
-                    <h3 className="text-lg font-semibold text-slate-300">No Notes Available</h3>
-                    <p className="text-slate-500">Check back for notes from your instructor.</p>
+                  <CardContent className="text-center py-8 sm:py-12 p-4">
+                    <StickyNote className="w-6 h-6 sm:w-8 sm:h-8 text-slate-600 mx-auto mb-3" />
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-300">No Notes Available</h3>
+                    <p className="text-slate-500 text-sm sm:text-base">Check back for notes from your instructor.</p>
                   </CardContent>
                 </Card>
               )}
@@ -316,3 +364,4 @@ const StudentDashboard = () => {
 };
 
 export default StudentDashboard;
+
