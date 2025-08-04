@@ -963,7 +963,7 @@ const loadData = async () => {
                     <div key={fb.id} className="p-4 bg-gray-50/80 rounded-lg border">
                       <div className="font-medium text-gray-800">From: {fb.studentEmail}</div>
                       <div className="text-sm text-gray-600">Rating: {fb.rating} <Star className="w-4 h-4 inline-block text-yellow-500 fill-yellow-500" /></div>
-                      <div className="text-sm text-gray-600">Feedback: {fb.feedbackText}</div>
+                      <div className="text-sm text-gray-600">Feedback: {fb.feedback}</div>
                       {fb.submittedAt && (
                         <div className="text-xs text-gray-500 mt-1">
                           Submitted: {new Date(fb.submittedAt.toDate()).toLocaleString()}
