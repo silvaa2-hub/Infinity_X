@@ -9,7 +9,8 @@ import {
   getDashboardContent,
   updateDashboardContent,
   updateStudentEvaluation,
-  bulkAddPartialScores, // NEW: Import the bulk add function
+  addPartialScore, // NEW: Import the add partial score function
+  deletePartialScore, // NEW: Import the delete partial score function
   getAllFeedback,
   deleteSubmission // Add this line
 } from '../lib/auth';
@@ -28,6 +29,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Separator } from "@/components/ui/separator";
 import { 
   LogOut, 
   Users, 
@@ -48,7 +50,9 @@ import {
   Briefcase, // Icon for Submissions
   MessageSquare,
   Star,
-  Upload // NEW: Icon for bulk upload
+  Upload, // NEW: Icon for bulk upload
+  Calendar,
+  Target
 } from 'lucide-react';
 
 const AdminPanel = () => {
@@ -56,15 +60,14 @@ const AdminPanel = () => {
   const [activeTab, setActiveTab] = useState('students');
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState('');
-  // NEW state for the evaluation pop-up form
-  const [isEvalDialogOpen, setIsEvalDialogOpen] = useState(false);
-  const [currentEval, setCurrentEval] = useState({ studentEmail: '', score: 0, feedback: '', evaluationDate: '' });
   
-  // NEW: State for bulk add scores dialog
-  const [isBulkScoresDialogOpen, setIsBulkScoresDialogOpen] = useState(false);
-  const [bulkScoresData, setBulkScoresData] = useState({
-    evaluationName: '',
-    pastedData: ''
+  // NEW: Enhanced evaluation dialog state
+  const [isEvalDialogOpen, setIsEvalDialogOpen] = useState(false);
+  const [currentStudent, setCurrentStudent] = useState(null);
+  const [currentEvaluation, setCurrentEvaluation] = useState(null);
+  const [newPartialScore, setNewPartialScore] = useState({
+    name: '',
+    score: ''
   });
   
   const [submissions, setSubmissions] = useState([]); // New state for submissions
@@ -158,60 +161,68 @@ const loadData = async () => {
     setLoading(false);
   };
   
-// UPDATED function to open the pop-up dialog
+  // NEW: Enhanced function to open the evaluation dialog
   const handleEditEvaluation = (email) => {
+    const student = authorizedEmails.find(e => e.email === email);
     const existingEval = evaluations.find(e => e.studentEmail === email);
-    if (existingEval) {
-      setCurrentEval(existingEval);
-    } else {
-      // Set up a new evaluation object
-      setCurrentEval({
-        studentEmail: email,
-        score: 0,
-        feedback: '',
-        evaluationDate: new Date().toISOString().split('T')[0] // today's date
-      });
-    }
+    
+    setCurrentStudent(student);
+    setCurrentEvaluation(existingEval || {
+      studentEmail: email,
+      totalScore: 0,
+      partialScores: []
+    });
+    setNewPartialScore({ name: '', score: '' });
     setIsEvalDialogOpen(true);
   };
 
-  // NEW function to save the evaluation from the pop-up
-  const handleSaveEvaluation = async (e) => {
+  // NEW: Handle adding a new partial score
+  const handleAddPartialScore = async (e) => {
     e.preventDefault();
-    setLoading(true);
-    const success = await updateStudentEvaluation({
-        ...currentEval,
-        evaluationDate: new Date().toISOString().split('T')[0] // always save with today's date
-    });
-
-    if (success) {
-      await loadData();
-      showMessage('Evaluation saved successfully!');
-    } else {
-      showMessage('Failed to save evaluation. Please try again.', true);
+    if (!newPartialScore.name || !newPartialScore.score) {
+      showMessage('Please fill in both evaluation name and score.', true);
+      return;
     }
-    setLoading(false);
-    setIsEvalDialogOpen(false); // Close the dialog
-  };
 
-  // NEW: Handle bulk add scores
-  const handleBulkAddScores = async (e) => {
-    e.preventDefault();
-    if (!bulkScoresData.evaluationName || !bulkScoresData.pastedData) {
-      showMessage('Please fill in both evaluation name and data.', true);
+    const score = parseFloat(newPartialScore.score);
+    if (isNaN(score) || score < 0 || score > 100) {
+      showMessage('Please enter a valid score between 0 and 100.', true);
       return;
     }
 
     setLoading(true);
-    const success = await bulkAddPartialScores(bulkScoresData.evaluationName, bulkScoresData.pastedData);
+    const success = await addPartialScore(currentEvaluation.studentEmail, newPartialScore.name, score);
     
     if (success) {
       await loadData();
-      showMessage('Bulk scores added successfully!');
-      setBulkScoresData({ evaluationName: '', pastedData: '' });
-      setIsBulkScoresDialogOpen(false);
+      // Refresh current evaluation data
+      const updatedEval = evaluations.find(e => e.studentEmail === currentEvaluation.studentEmail);
+      setCurrentEvaluation(updatedEval || currentEvaluation);
+      setNewPartialScore({ name: '', score: '' });
+      showMessage('Partial score added successfully!');
     } else {
-      showMessage('Failed to add bulk scores. Please check your data format.', true);
+      showMessage('Failed to add partial score. Please try again.', true);
+    }
+    setLoading(false);
+  };
+
+  // NEW: Handle deleting a partial score
+  const handleDeletePartialScore = async (partialScoreId) => {
+    if (!window.confirm('Are you sure you want to delete this partial score?')) {
+      return;
+    }
+
+    setLoading(true);
+    const success = await deletePartialScore(currentEvaluation.studentEmail, partialScoreId);
+    
+    if (success) {
+      await loadData();
+      // Refresh current evaluation data
+      const updatedEval = evaluations.find(e => e.studentEmail === currentEvaluation.studentEmail);
+      setCurrentEvaluation(updatedEval || { ...currentEvaluation, partialScores: [] });
+      showMessage('Partial score deleted successfully!');
+    } else {
+      showMessage('Failed to delete partial score. Please try again.', true);
     }
     setLoading(false);
   };
@@ -317,6 +328,7 @@ const loadData = async () => {
     }
     setLoading(false);
   };
+  
   const handleDeleteSubmission = async (submissionId) => {
   if (window.confirm("Are you sure you want to delete this submission?")) {
     setLoading(true);
@@ -425,17 +437,6 @@ const loadData = async () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              {/* NEW: Bulk Add Scores Button */}
-              <div className="mb-6">
-                <Button
-                  onClick={() => setIsBulkScoresDialogOpen(true)}
-                  className="bg-green-600 hover:bg-green-700 text-white flex items-center space-x-2"
-                >
-                  <Upload className="w-4 h-4" />
-                  <span>Bulk Add Scores</span>
-                </Button>
-              </div>
-
               <div className="space-y-3">
                 {authorizedEmails.map((emailObj) => {
                   const evaluation = evaluations.find(e => e.studentEmail === emailObj.email);
@@ -445,13 +446,9 @@ const loadData = async () => {
                         <span className="font-medium text-gray-800 break-all">{emailObj.email}</span>
                         {evaluation && (
                           <div className="text-sm text-gray-600 mt-1">
-                            {/* UPDATED: Show totalScore instead of score */}
-                            Total Score: <span className="font-semibold text-blue-600">{evaluation.totalScore || evaluation.score || 0}/100</span>
+                            Total Score: <span className="font-semibold text-blue-600">{evaluation.totalScore || 0}/100</span>
                             {evaluation.partialScores && evaluation.partialScores.length > 0 && (
                               <span className="ml-2">• {evaluation.partialScores.length} partial score(s)</span>
-                            )}
-                            {evaluation.evaluationDate && (
-                              <span className="ml-2">• Last updated: {evaluation.evaluationDate}</span>
                             )}
                           </div>
                         )}
@@ -463,7 +460,7 @@ const loadData = async () => {
                         className="flex items-center space-x-2 border-blue-300 text-blue-600 hover:bg-blue-50"
                       >
                         <Edit className="w-4 h-4" />
-                        <span>{evaluation ? 'Edit Evaluation' : 'Add Evaluation'}</span>
+                        <span>Manage Scores</span>
                       </Button>
                     </div>
                   );
@@ -989,101 +986,123 @@ const loadData = async () => {
           {renderTabContent()}
         </div>
 
-        {/* Evaluation Dialog */}
+        {/* NEW: Enhanced Evaluation Management Dialog */}
         <Dialog open={isEvalDialogOpen} onOpenChange={setIsEvalDialogOpen}>
-          <DialogContent className="sm:max-w-[425px]">
+          <DialogContent className="sm:max-w-[700px] max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Student Evaluation</DialogTitle>
+              <DialogTitle className="flex items-center gap-2">
+                <Target className="w-5 h-5 text-blue-600" />
+                Manage Evaluations - {currentStudent?.email}
+              </DialogTitle>
               <DialogDescription>
-                Update the evaluation for {currentEval.studentEmail}
+                Add new partial scores and manage existing evaluations for this student.
               </DialogDescription>
             </DialogHeader>
-            <form onSubmit={handleSaveEvaluation} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Score (0-100)</label>
-                <Input
-                  type="number"
-                  min="0"
-                  max="100"
-                  value={currentEval.score}
-                  onChange={(e) => setCurrentEval({ ...currentEval, score: parseInt(e.target.value) || 0 })}
-                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                />
+            
+            <div className="space-y-6">
+              {/* Section 1: Add New Partial Score */}
+              <div className="space-y-4">
+                <div className="flex items-center gap-2">
+                  <Plus className="w-4 h-4 text-green-600" />
+                  <h3 className="text-lg font-semibold text-gray-800">Add New Partial Score</h3>
+                </div>
+                <form onSubmit={handleAddPartialScore} className="space-y-4 p-4 bg-green-50/50 rounded-lg border border-green-200">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Evaluation Name</label>
+                      <Input
+                        type="text"
+                        placeholder="e.g., Quiz 1, Homework 2"
+                        value={newPartialScore.name}
+                        onChange={(e) => setNewPartialScore({ ...newPartialScore, name: e.target.value })}
+                        className="border-gray-300 focus:border-green-500 focus:ring-green-500"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Points (0-100)</label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        step="0.1"
+                        placeholder="85"
+                        value={newPartialScore.score}
+                        onChange={(e) => setNewPartialScore({ ...newPartialScore, score: e.target.value })}
+                        className="border-gray-300 focus:border-green-500 focus:ring-green-500"
+                      />
+                    </div>
+                  </div>
+                  <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700 text-white">
+                    {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    <span className="ml-2">Add Partial Score</span>
+                  </Button>
+                </form>
               </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Feedback</label>
-                <Textarea
-                  value={currentEval.feedback}
-                  onChange={(e) => setCurrentEval({ ...currentEval, feedback: e.target.value })}
-                  rows={4}
-                  className="border-gray-300 focus:border-blue-500 focus:ring-blue-500"
-                  placeholder="Provide detailed feedback for the student..."
-                />
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsEvalDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading} className="bg-blue-600 hover:bg-blue-700 text-white">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />}
-                  <span className="ml-2">Save Evaluation</span>
-                </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
 
-        {/* NEW: Bulk Add Scores Dialog */}
-        <Dialog open={isBulkScoresDialogOpen} onOpenChange={setIsBulkScoresDialogOpen}>
-          <DialogContent className="sm:max-w-[600px]">
-            <DialogHeader>
-              <DialogTitle>Bulk Add Partial Scores</DialogTitle>
-              <DialogDescription>
-                Add partial scores for a specific evaluation (e.g., Quiz 1, Homework 2) for multiple students at once.
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleBulkAddScores} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Evaluation Name</label>
-                <Input
-                  type="text"
-                  placeholder="e.g., Quiz 1, Homework 2, Final Project"
-                  value={bulkScoresData.evaluationName}
-                  onChange={(e) => setBulkScoresData({ ...bulkScoresData, evaluationName: e.target.value })}
-                  className="border-gray-300 focus:border-green-500 focus:ring-green-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Student Data</label>
-                <Textarea
-                  value={bulkScoresData.pastedData}
-                  onChange={(e) => setBulkScoresData({ ...bulkScoresData, pastedData: e.target.value })}
-                  rows={8}
-                  className="border-gray-300 focus:border-green-500 focus:ring-green-500 font-mono text-sm"
-                  placeholder="Paste data from Excel here. Format should be:
-student1@example.com	85
-student2@example.com	92
-student3@example.com	78
+              <Separator />
 
-Each line should have: email [TAB] score"
-                />
+              {/* Section 2: Existing Scores */}
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <Award className="w-4 h-4 text-blue-600" />
+                    <h3 className="text-lg font-semibold text-gray-800">Existing Scores</h3>
+                  </div>
+                  {currentEvaluation?.totalScore !== undefined && (
+                    <div className="text-right">
+                      <div className="text-sm text-gray-600">Total Score</div>
+                      <div className="text-2xl font-bold text-blue-600">
+                        {currentEvaluation.totalScore}/100
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                <div className="space-y-3 max-h-60 overflow-y-auto">
+                  {currentEvaluation?.partialScores && currentEvaluation.partialScores.length > 0 ? (
+                    currentEvaluation.partialScores
+                      .sort((a, b) => new Date(b.date) - new Date(a.date))
+                      .map((partial) => (
+                        <div key={partial.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3">
+                              <h4 className="font-medium text-gray-800">{partial.name}</h4>
+                              <Badge variant="outline" className="text-blue-600 border-blue-300">
+                                {partial.score}/100
+                              </Badge>
+                            </div>
+                            <div className="flex items-center gap-1 text-xs text-gray-500 mt-1">
+                              <Calendar className="w-3 h-3" />
+                              {partial.date}
+                            </div>
+                          </div>
+                          <Button
+                            onClick={() => handleDeletePartialScore(partial.id)}
+                            variant="destructive"
+                            size="sm"
+                            disabled={loading}
+                            className="ml-3"
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      ))
+                  ) : (
+                    <div className="text-center py-8 text-gray-500">
+                      <Award className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                      <p>No partial scores yet</p>
+                      <p className="text-sm">Add the first evaluation above</p>
+                    </div>
+                  )}
+                </div>
               </div>
-              <div className="bg-blue-50 p-3 rounded-lg">
-                <p className="text-sm text-blue-800">
-                  <strong>Instructions:</strong> Copy data from Excel with two columns: student email and score. 
-                  The system will automatically calculate the new total score for each student by averaging all their partial scores.
-                </p>
-              </div>
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsBulkScoresDialogOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700 text-white">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Upload className="w-4 h-4" />}
-                  <span className="ml-2">Add Scores</span>
-                </Button>
-              </DialogFooter>
-            </form>
+            </div>
+
+            <DialogFooter>
+              <Button type="button" variant="outline" onClick={() => setIsEvalDialogOpen(false)}>
+                Close
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
       </div>
