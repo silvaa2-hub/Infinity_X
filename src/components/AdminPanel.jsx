@@ -1,19 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { db } from '../lib/firebase'; // Import db from firebase
 import { collection, getDocs } from 'firebase/firestore'; // Import firestore functions
-import { 
-  getAuthorizedEmails, 
-  addAuthorizedEmail, 
+import {
+  getAuthorizedEmails,
+  addAuthorizedEmail,
   removeAuthorizedEmail,
   getDashboardContent,
   updateDashboardContent,
   updateStudentEvaluation,
   addPartialScore, // Import the add partial score function
   deletePartialScore, // Import the delete partial score function
-  deletePartialScoreFromAll, // NEW: Import the new bulk delete function
   getAllFeedback,
-  deleteSubmission // Add this line
+  deleteSubmission
 } from '../lib/auth';
 import GoogleDriveSync from './GoogleDriveSync';
 import { Button } from '@/components/ui/button';
@@ -31,12 +30,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Separator } from "@/components/ui/separator";
-import { 
-  LogOut, 
-  Users, 
-  Video, 
-  FileText, 
-  ExternalLink, 
+import {
+  LogOut,
+  Users,
+  Video,
+  FileText,
+  ExternalLink,
   StickyNote,
   Plus,
   Trash2,
@@ -47,14 +46,15 @@ import {
   Database,
   Loader2,
   Cloud,
-  Award, // Icon for Evaluations
+  Award, // New Icon for Evaluations
   Briefcase, // Icon for Submissions
   MessageSquare,
   Star,
-  Upload, // Icon for bulk upload
+  Upload, // NEW: Icon for bulk upload
   Calendar,
   Target
 } from 'lucide-react';
+import Papa from 'papaparse'; // Import PapaParse
 
 const AdminPanel = () => {
   const { user, logout } = useAuth();
@@ -71,12 +71,8 @@ const AdminPanel = () => {
     score: ''
   });
   
-  // NEW: Bulk delete dialog state
-  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
-  const [bulkDeleteScoreName, setBulkDeleteScoreName] = useState('');
-  
-  const [submissions, setSubmissions] = useState([]); // State for submissions
-  const [feedback, setFeedback] = useState([]); // State for feedback
+  const [submissions, setSubmissions] = useState([]); // New state for submissions
+  const [feedback, setFeedback] = useState([]); // New state for feedback
   // Student management state
   const [authorizedEmails, setAuthorizedEmails] = useState([]);
   const [newEmail, setNewEmail] = useState('');
@@ -98,11 +94,13 @@ const AdminPanel = () => {
   const [newLink, setNewLink] = useState({ title: '', description: '', url: '' });
   const [newNote, setNewNote] = useState({ title: '', content: '', date: '' });
 
+  const fileInputRef = useRef(null); // Ref for the hidden file input
+
   useEffect(() => {
     loadData();
   }, []);
 
-  // The loadData function now also fetches evaluations
+  // UPDATED: The loadData function now also fetches evaluations
 const loadData = async () => {
   setLoading(true);
   try {
@@ -166,7 +164,7 @@ const loadData = async () => {
     setLoading(false);
   };
   
-  // Enhanced function to open the evaluation dialog
+  // NEW: Enhanced function to open the evaluation dialog
   const handleEditEvaluation = (email) => {
     const student = authorizedEmails.find(e => e.email === email);
     const existingEval = evaluations.find(e => e.studentEmail === email);
@@ -181,7 +179,7 @@ const loadData = async () => {
     setIsEvalDialogOpen(true);
   };
 
-  // Handle adding a new partial score
+  // NEW: Handle adding a new partial score
   const handleAddPartialScore = async (e) => {
     e.preventDefault();
     if (!newPartialScore.name || !newPartialScore.score) {
@@ -205,7 +203,7 @@ const loadData = async () => {
       date: new Date().toISOString().split('T')[0]
     };
     
-    const success = await addPartialScore(currentEvaluation.studentEmail, partialScoreObj);
+    const success = await addPartialScore(currentEvaluation.studentEmail, newPartialScore.name, score);
     
     if (success) {
       await loadData();
@@ -220,7 +218,7 @@ const loadData = async () => {
     setLoading(false);
   };
 
-  // FIXED: Handle deleting a partial score
+  // NEW: Handle deleting a partial score
   const handleDeletePartialScore = async (partialScoreId) => {
     if (!window.confirm('Are you sure you want to delete this partial score?')) {
       return;
@@ -241,30 +239,45 @@ const loadData = async () => {
     setLoading(false);
   };
 
-  // NEW: Handle bulk delete partial score
-  const handleBulkDeletePartialScore = async (e) => {
-    e.preventDefault();
-    if (!bulkDeleteScoreName.trim()) {
-      showMessage('Please enter a score name to delete.', true);
-      return;
-    }
+  // NEW: Handle bulk upload of scores
+  const handleBulkUpload = (event) => {
+    const file = event.target.files[0];
+    if (file) {
+      Papa.parse(file, {
+        header: true,
+        skipEmptyLines: true,
+        complete: async (results) => {
+          setLoading(true);
+          let successCount = 0;
+          let errorCount = 0;
 
-    if (!window.confirm(`Are you sure you want to delete "${bulkDeleteScoreName}" from ALL students? This action cannot be undone.`)) {
-      return;
-    }
+          for (const row of results.data) {
+            const studentEmail = row.email;
+            const scoreName = row.name;
+            const scoreValue = parseFloat(row.score);
 
-    setLoading(true);
-    const result = await deletePartialScoreFromAll(bulkDeleteScoreName.trim());
-    
-    if (result.success) {
-      await loadData();
-      setBulkDeleteScoreName('');
-      setIsBulkDeleteDialogOpen(false);
-      showMessage(`Successfully deleted "${bulkDeleteScoreName}" from ${result.updatedCount} students!`);
-    } else {
-      showMessage(`Failed to delete partial score: ${result.error}`, true);
+            if (studentEmail && scoreName && !isNaN(scoreValue)) {
+              const success = await addPartialScore(studentEmail, scoreName, scoreValue);
+              if (success) {
+                successCount++;
+              } else {
+                errorCount++;
+              }
+            } else {
+              errorCount++;
+            }
+          }
+          await loadData();
+          setLoading(false);
+          showMessage(`Bulk upload complete: ${successCount} scores added, ${errorCount} errors.`, errorCount > 0);
+        },
+        error: (error) => {
+          console.error('CSV parsing error:', error);
+          showMessage('Error parsing CSV file.', true);
+          setLoading(false);
+        },
+      });
     }
-    setLoading(false);
   };
 
   // Content management functions
@@ -477,16 +490,23 @@ const loadData = async () => {
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              {/* NEW: Bulk Delete Button */}
+              {/* Bulk Add Scores Button */}
               <div className="mb-6">
+                <input
+                  type="file"
+                  accept=".csv"
+                  onChange={handleBulkUpload}
+                  ref={fileInputRef}
+                  style={{ display: 'none' }} // Hide the input
+                />
                 <Button
-                  onClick={() => setIsBulkDeleteDialogOpen(true)}
+                  onClick={() => fileInputRef.current.click()} // Trigger click on hidden input
                   variant="outline"
-                  className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                  className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                   disabled={loading}
                 >
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Bulk Delete a Score
+                  <Upload className="w-4 h-4 mr-2" />
+                  Bulk Add Scores
                 </Button>
               </div>
 
@@ -533,7 +553,400 @@ const loadData = async () => {
           </Card>
         );
 
-      // ... (other cases remain the same)
+      case 'lectures':
+        return (
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
+            <CardHeader className="bg-gradient-to-r from-purple-50 to-pink-50 rounded-t-lg">
+              <CardTitle className="flex items-center space-x-2 text-gray-800">
+                <Video className="w-5 h-5 text-purple-600" />
+                <span>Lectures</span>
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Manage lecture videos and their details.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <form onSubmit={handleAddLecture} className="space-y-4 mb-6">
+                <Input
+                  type="text"
+                  placeholder="Lecture Title"
+                  value={newLecture.title}
+                  onChange={(e) => setNewLecture({ ...newLecture, title: e.target.value })}
+                  required
+                />
+                <Textarea
+                  placeholder="Description"
+                  value={newLecture.description}
+                  onChange={(e) => setNewLecture({ ...newLecture, description: e.target.value })}
+                />
+                <Input
+                  type="url"
+                  placeholder="Video URL"
+                  value={newLecture.url}
+                  onChange={(e) => setNewLecture({ ...newLecture, url: e.target.value })}
+                  required
+                />
+                <Input
+                  type="text"
+                  placeholder="Duration (e.g., 1h 30m)"
+                  value={newLecture.duration}
+                  onChange={(e) => setNewLecture({ ...newLecture, duration: e.target.value })}
+                />
+                <Input
+                  type="date"
+                  placeholder="Date"
+                  value={newLecture.date}
+                  onChange={(e) => setNewLecture({ ...newLecture, date: e.target.value })}
+                />
+                <Button type="submit" disabled={loading} className="w-full bg-purple-600 hover:bg-purple-700">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  <span className="ml-2">Add Lecture</span>
+                </Button>
+              </form>
+
+              <div className="space-y-3">
+                {content.lectures.map((lecture) => (
+                  <div key={lecture.id} className="flex items-center justify-between p-4 bg-gray-50/80 rounded-lg border">
+                    <div>
+                      <div className="font-medium text-gray-800">{lecture.title}</div>
+                      <div className="text-sm text-gray-600">{lecture.description}</div>
+                      <a href={lecture.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">View Video</a>
+                    </div>
+                    <Button
+                      onClick={() => handleRemoveItem('lectures', lecture.id)}
+                      variant="destructive"
+                      size="sm"
+                      disabled={loading}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {content.lectures.length === 0 && (
+                  <div className="text-center py-12">
+                    <Video className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No lectures added yet</p>
+                    <p className="text-gray-400 text-sm">Add new lecture content</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 'materials':
+        return (
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-teal-50 rounded-t-lg">
+              <CardTitle className="flex items-center space-x-2 text-gray-800">
+                <FileText className="w-5 h-5 text-green-600" />
+                <span>Materials</span>
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Manage study materials and resources.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <form onSubmit={handleAddMaterial} className="space-y-4 mb-6">
+                <Input
+                  type="text"
+                  placeholder="Material Title"
+                  value={newMaterial.title}
+                  onChange={(e) => setNewMaterial({ ...newMaterial, title: e.target.value })}
+                  required
+                />
+                <Textarea
+                  placeholder="Description"
+                  value={newMaterial.description}
+                  onChange={(e) => setNewMaterial({ ...newMaterial, description: e.target.value })}
+                />
+                <Input
+                  type="url"
+                  placeholder="Material URL (PDF, Doc, etc.)"
+                  value={newMaterial.url}
+                  onChange={(e) => setNewMaterial({ ...newMaterial, url: e.target.value })}
+                  required
+                />
+                <Input
+                  type="text"
+                  placeholder="Type (e.g., PDF, DOCX)"
+                  value={newMaterial.type}
+                  onChange={(e) => setNewMaterial({ ...newMaterial, type: e.target.value })}
+                />
+                <Button type="submit" disabled={loading} className="w-full bg-green-600 hover:bg-green-700">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  <span className="ml-2">Add Material</span>
+                </Button>
+              </form>
+
+              <div className="space-y-3">
+                {content.materials.map((material) => (
+                  <div key={material.id} className="flex items-center justify-between p-4 bg-gray-50/80 rounded-lg border">
+                    <div>
+                      <div className="font-medium text-gray-800">{material.title}</div>
+                      <div className="text-sm text-gray-600">{material.description}</div>
+                      <a href={material.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">View Material ({material.type})</a>
+                    </div>
+                    <Button
+                      onClick={() => handleRemoveItem('materials', material.id)}
+                      variant="destructive"
+                      size="sm"
+                      disabled={loading}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {content.materials.length === 0 && (
+                  <div className="text-center py-12">
+                    <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No materials added yet</p>
+                    <p className="text-gray-400 text-sm">Add new study materials</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 'links':
+        return (
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
+            <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-t-lg">
+              <CardTitle className="flex items-center space-x-2 text-gray-800">
+                <ExternalLink className="w-5 h-5 text-blue-600" />
+                <span>Important Links</span>
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Manage external links for students.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <form onSubmit={handleAddLink} className="space-y-4 mb-6">
+                <Input
+                  type="text"
+                  placeholder="Link Title"
+                  value={newLink.title}
+                  onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
+                  required
+                />
+                <Textarea
+                  placeholder="Description"
+                  value={newLink.description}
+                  onChange={(e) => setNewLink({ ...newLink, description: e.target.value })}
+                />
+                <Input
+                  type="url"
+                  placeholder="URL"
+                  value={newLink.url}
+                  onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                  required
+                />
+                <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  <span className="ml-2">Add Link</span>
+                </Button>
+              </form>
+
+              <div className="space-y-3">
+                {content.links.map((link) => (
+                  <div key={link.id} className="flex items-center justify-between p-4 bg-gray-50/80 rounded-lg border">
+                    <div>
+                      <div className="font-medium text-gray-800">{link.title}</div>
+                      <div className="text-sm text-gray-600">{link.description}</div>
+                      <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">Go to Link</a>
+                    </div>
+                    <Button
+                      onClick={() => handleRemoveItem('links', link.id)}
+                      variant="destructive"
+                      size="sm"
+                      disabled={loading}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {content.links.length === 0 && (
+                  <div className="text-center py-12">
+                    <ExternalLink className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No links added yet</p>
+                    <p className="text-gray-400 text-sm">Add important external links</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 'notes':
+        return (
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
+            <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-lg">
+              <CardTitle className="flex items-center space-x-2 text-gray-800">
+                <StickyNote className="w-5 h-5 text-indigo-600" />
+                <span>Notes</span>
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Manage general notes or announcements.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <form onSubmit={handleAddNote} className="space-y-4 mb-6">
+                <Input
+                  type="text"
+                  placeholder="Note Title"
+                  value={newNote.title}
+                  onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
+                  required
+                />
+                <Textarea
+                  placeholder="Note Content"
+                  value={newNote.content}
+                  onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
+                  required
+                />
+                <Button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  <span className="ml-2">Add Note</span>
+                </Button>
+              </form>
+
+              <div className="space-y-3">
+                {content.notes.map((note) => (
+                  <div key={note.id} className="flex items-center justify-between p-4 bg-gray-50/80 rounded-lg border">
+                    <div>
+                      <div className="font-medium text-gray-800">{note.title}</div>
+                      <div className="text-sm text-gray-600">{note.content}</div>
+                      <div className="text-xs text-gray-500">{note.date}</div>
+                    </div>
+                    <Button
+                      onClick={() => handleRemoveItem('notes', note.id)}
+                      variant="destructive"
+                      size="sm"
+                      disabled={loading}
+                    >
+                      <Trash2 className="w-4 h-4" />
+                    </Button>
+                  </div>
+                ))}
+                {content.notes.length === 0 && (
+                  <div className="text-center py-12">
+                    <StickyNote className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No notes added yet</p>
+                    <p className="text-gray-400 text-sm">Add general notes or announcements</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 'drive-sync':
+        return (
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
+            <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-t-lg">
+              <CardTitle className="flex items-center space-x-2 text-gray-800">
+                <Cloud className="w-5 h-5 text-teal-600" />
+                <span>Google Drive Sync</span>
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Synchronize content with Google Drive.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <GoogleDriveSync />
+            </CardContent>
+          </Card>
+        );
+
+      case 'submissions':
+        return (
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
+            <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 rounded-t-lg">
+              <CardTitle className="flex items-center space-x-2 text-gray-800">
+                <Briefcase className="w-5 h-5 text-orange-600" />
+                <span>Submissions</span>
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                View and manage student project submissions.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                {submissions.length > 0 ? (
+                  submissions.map((submission) => (
+                    <div key={submission.id} className="flex items-center justify-between p-4 bg-gray-50/80 rounded-lg border">
+                      <div>
+                        <div className="font-medium text-gray-800">{submission.studentEmail}</div>
+                        <div className="text-sm text-gray-600">Project: {submission.projectName}</div>
+                        <a href={submission.driveLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">View Submission</a>
+                        {submission.submittedAt && (
+                          <div className="text-xs text-gray-500 mt-1">
+                            Submitted: {new Date(submission.submittedAt.toDate()).toLocaleString()}
+                          </div>
+                        )}
+                      </div>
+                      <Button
+                        onClick={() => handleDeleteSubmission(submission.id)}
+                        variant="destructive"
+                        size="sm"
+                        disabled={loading}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <Briefcase className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No submissions yet</p>
+                    <p className="text-gray-400 text-sm">Students will submit their projects here</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      case 'feedback':
+        return (
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
+            <CardHeader className="bg-gradient-to-r from-pink-50 to-red-50 rounded-t-lg">
+              <CardTitle className="flex items-center space-x-2 text-gray-800">
+                <MessageSquare className="w-5 h-5 text-pink-600" />
+                <span>Student Feedback</span>
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                View and manage feedback submitted by students.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <div className="space-y-3">
+                {feedback.length > 0 ? (
+                  feedback.map((fb) => (
+                    <div key={fb.id} className="p-4 bg-gray-50/80 rounded-lg border">
+                      <div className="font-medium text-gray-800">From: {fb.studentEmail}</div>
+                      <div className="text-sm text-gray-600">Rating: {fb.rating} <Star className="w-4 h-4 inline-block text-yellow-500 fill-yellow-500" /></div>
+                      <div className="text-sm text-gray-600">Feedback: {fb.feedbackText}</div>
+                      {fb.submittedAt && (
+                        <div className="text-xs text-gray-500 mt-1">
+                          Submitted: {new Date(fb.submittedAt.toDate()).toLocaleString()}
+                        </div>
+                      )}
+                    </div>
+                  ))
+                ) : (
+                  <div className="text-center py-12">
+                    <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No feedback yet</p>
+                    <p className="text-gray-400 text-sm">Students can submit feedback from their dashboard</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+
       default:
         return <div>Select a tab</div>;
     }
@@ -578,6 +991,27 @@ const loadData = async () => {
           </TabButton>
           <TabButton value="evaluations" isActive={activeTab === 'evaluations'} onClick={setActiveTab} icon={Award} colorScheme="yellow">
             Evaluations
+          </TabButton>
+          <TabButton value="lectures" isActive={activeTab === 'lectures'} onClick={setActiveTab} icon={Video} colorScheme="purple">
+            Lectures
+          </TabButton>
+          <TabButton value="materials" isActive={activeTab === 'materials'} onClick={setActiveTab} icon={FileText} colorScheme="green">
+            Materials
+          </TabButton>
+          <TabButton value="links" isActive={activeTab === 'links'} onClick={setActiveTab} icon={ExternalLink} colorScheme="cyan">
+            Links
+          </TabButton>
+          <TabButton value="notes" isActive={activeTab === 'notes'} onClick={setActiveTab} icon={StickyNote} colorScheme="indigo">
+            Notes
+          </TabButton>
+          <TabButton value="drive-sync" isActive={activeTab === 'drive-sync'} onClick={setActiveTab} icon={Cloud} colorScheme="teal">
+            Drive Sync
+          </TabButton>
+          <TabButton value="submissions" isActive={activeTab === 'submissions'} onClick={setActiveTab} icon={Briefcase} colorScheme="orange">
+            Submissions
+          </TabButton>
+          <TabButton value="feedback" isActive={activeTab === 'feedback'} onClick={setActiveTab} icon={MessageSquare} colorScheme="pink">
+            Feedback
           </TabButton>
         </div>
 
@@ -631,7 +1065,7 @@ const loadData = async () => {
                 </div>
               ) : (
                 <div className="text-center py-8 text-gray-500">
-                  <Award className="w-12 h-12 text-gray-400 mx-auto mb-2" />
+                  <Award className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                   <p>No partial scores yet</p>
                 </div>
               )}
@@ -683,60 +1117,6 @@ const loadData = async () => {
               Close
             </Button>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* NEW: Bulk Delete Dialog */}
-      <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center space-x-2 text-red-700">
-              <Trash2 className="w-5 h-5" />
-              <span>Bulk Delete Partial Score</span>
-            </DialogTitle>
-            <DialogDescription>
-              Delete a specific partial score from ALL students. This action cannot be undone.
-            </DialogDescription>
-          </DialogHeader>
-
-          <form onSubmit={handleBulkDeletePartialScore} className="space-y-4">
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Score Name to Delete
-              </label>
-              <Input
-                type="text"
-                placeholder="e.g., Quiz 1, Assignment 2"
-                value={bulkDeleteScoreName}
-                onChange={(e) => setBulkDeleteScoreName(e.target.value)}
-                required
-              />
-              <p className="text-xs text-gray-500 mt-1">
-                Enter the exact name of the partial score you want to delete from all students.
-              </p>
-            </div>
-
-            <DialogFooter className="gap-2">
-              <Button 
-                type="button" 
-                variant="outline" 
-                onClick={() => {
-                  setIsBulkDeleteDialogOpen(false);
-                  setBulkDeleteScoreName('');
-                }}
-              >
-                Cancel
-              </Button>
-              <Button 
-                type="submit" 
-                variant="destructive" 
-                disabled={loading || !bulkDeleteScoreName.trim()}
-              >
-                {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
-                Delete From All Students
-              </Button>
-            </DialogFooter>
-          </form>
         </DialogContent>
       </Dialog>
     </div>
