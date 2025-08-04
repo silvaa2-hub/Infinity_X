@@ -11,6 +11,7 @@ import {
   updateStudentEvaluation,
   addPartialScore, // Import the add partial score function
   deletePartialScore, // Import the delete partial score function
+  deletePartialScoreFromAll, // Import the bulk delete function
   getAllFeedback,
   deleteSubmission
 } from '../lib/auth';
@@ -52,7 +53,8 @@ import {
   Star,
   Upload, // NEW: Icon for bulk upload
   Calendar,
-  Target
+  Target,
+  X
 } from 'lucide-react';
 import Papa from 'papaparse'; // Import PapaParse
 
@@ -70,6 +72,15 @@ const AdminPanel = () => {
     name: '',
     score: ''
   });
+  
+  // Bulk CSV upload dialog state
+  const [isBulkUploadDialogOpen, setIsBulkUploadDialogOpen] = useState(false);
+  const [bulkEvaluationName, setBulkEvaluationName] = useState('');
+  const [csvFile, setCsvFile] = useState(null);
+  
+  // Bulk delete dialog state
+  const [isBulkDeleteDialogOpen, setIsBulkDeleteDialogOpen] = useState(false);
+  const [bulkDeleteScoreName, setBulkDeleteScoreName] = useState('');
   
   const [submissions, setSubmissions] = useState([]); // New state for submissions
   const [feedback, setFeedback] = useState([]); // New state for feedback
@@ -195,14 +206,6 @@ const loadData = async () => {
 
     setLoading(true);
     
-    // Create the partial score object with unique ID
-    const partialScoreObj = {
-      id: Date.now().toString(), // Use timestamp as unique ID
-      name: newPartialScore.name,
-      score: score,
-      date: new Date().toISOString().split('T')[0]
-    };
-    
     const success = await addPartialScore(currentEvaluation.studentEmail, newPartialScore.name, score);
     
     if (success) {
@@ -239,45 +242,76 @@ const loadData = async () => {
     setLoading(false);
   };
 
-  // NEW: Handle bulk upload of scores
-  const handleBulkUpload = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      Papa.parse(file, {
-        header: true,
-        skipEmptyLines: true,
-        complete: async (results) => {
-          setLoading(true);
-          let successCount = 0;
-          let errorCount = 0;
+  // NEW: Handle bulk CSV upload
+  const handleBulkUploadSubmit = async () => {
+    if (!csvFile || !bulkEvaluationName.trim()) {
+      showMessage('Please select a CSV file and enter an evaluation name.', true);
+      return;
+    }
 
-          for (const row of results.data) {
-            const studentEmail = row.email;
-            const scoreName = row.name;
-            const scoreValue = parseFloat(row.score);
+    setLoading(true);
+    
+    Papa.parse(csvFile, {
+      header: true,
+      skipEmptyLines: true,
+      complete: async (results) => {
+        let successCount = 0;
+        let errorCount = 0;
 
-            if (studentEmail && scoreName && !isNaN(scoreValue)) {
-              const success = await addPartialScore(studentEmail, scoreName, scoreValue);
-              if (success) {
-                successCount++;
-              } else {
-                errorCount++;
-              }
+        for (const row of results.data) {
+          const studentEmail = row.email;
+          const scoreValue = parseFloat(row.score);
+
+          if (studentEmail && !isNaN(scoreValue)) {
+            const success = await addPartialScore(studentEmail, bulkEvaluationName, scoreValue);
+            if (success) {
+              successCount++;
             } else {
               errorCount++;
             }
+          } else {
+            errorCount++;
           }
-          await loadData();
-          setLoading(false);
-          showMessage(`Bulk upload complete: ${successCount} scores added, ${errorCount} errors.`, errorCount > 0);
-        },
-        error: (error) => {
-          console.error('CSV parsing error:', error);
-          showMessage('Error parsing CSV file.', true);
-          setLoading(false);
-        },
-      });
+        }
+        
+        await loadData();
+        setLoading(false);
+        setIsBulkUploadDialogOpen(false);
+        setCsvFile(null);
+        setBulkEvaluationName('');
+        showMessage(`Bulk upload complete: ${successCount} scores added, ${errorCount} errors.`, errorCount > 0);
+      },
+      error: (error) => {
+        console.error('CSV parsing error:', error);
+        showMessage('Error parsing CSV file.', true);
+        setLoading(false);
+      },
+    });
+  };
+
+  // NEW: Handle bulk delete
+  const handleBulkDeleteSubmit = async () => {
+    if (!bulkDeleteScoreName.trim()) {
+      showMessage('Please enter the evaluation name to delete.', true);
+      return;
     }
+
+    if (!window.confirm(`Are you sure you want to delete "${bulkDeleteScoreName}" from ALL students? This action cannot be undone.`)) {
+      return;
+    }
+
+    setLoading(true);
+    const result = await deletePartialScoreFromAll(bulkDeleteScoreName);
+    
+    if (result.success) {
+      await loadData();
+      setIsBulkDeleteDialogOpen(false);
+      setBulkDeleteScoreName('');
+      showMessage(`Successfully deleted "${bulkDeleteScoreName}" from ${result.updatedCount} students.`);
+    } else {
+      showMessage('Failed to delete scores. Please try again.', true);
+    }
+    setLoading(false);
   };
 
   // Content management functions
@@ -488,19 +522,11 @@ const loadData = async () => {
               <CardDescription className="text-gray-600">
                 View and manage student evaluations and scores.
               </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              {/* Bulk Add Scores Button */}
-              <div className="mb-6">
-                <input
-                  type="file"
-                  accept=".csv"
-                  onChange={handleBulkUpload}
-                  ref={fileInputRef}
-                  style={{ display: 'none' }} // Hide the input
-                />
+              
+              {/* Action Buttons */}
+              <div className="flex flex-wrap gap-2 pt-4">
                 <Button
-                  onClick={() => fileInputRef.current.click()} // Trigger click on hidden input
+                  onClick={() => setIsBulkUploadDialogOpen(true)}
                   variant="outline"
                   className="bg-green-50 hover:bg-green-100 text-green-700 border-green-200"
                   disabled={loading}
@@ -508,8 +534,18 @@ const loadData = async () => {
                   <Upload className="w-4 h-4 mr-2" />
                   Bulk Add Scores
                 </Button>
+                <Button
+                  onClick={() => setIsBulkDeleteDialogOpen(true)}
+                  variant="outline"
+                  className="bg-red-50 hover:bg-red-100 text-red-700 border-red-200"
+                  disabled={loading}
+                >
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Bulk Delete a Score
+                </Button>
               </div>
-
+            </CardHeader>
+            <CardContent className="p-6">
               <div className="space-y-3">
                 {authorizedEmails.map((emailObj) => {
                   const evaluation = evaluations.find(e => e.studentEmail === emailObj.email);
@@ -536,7 +572,7 @@ const loadData = async () => {
                         className="mt-2 sm:mt-0 ml-0 sm:ml-2 flex-shrink-0"
                       >
                         <Edit className="w-4 h-4 mr-1" />
-                        Edit
+                        Manage Scores
                       </Button>
                     </div>
                   );
@@ -1019,13 +1055,13 @@ const loadData = async () => {
         {renderTabContent()}
       </div>
 
-      {/* Evaluation Dialog */}
+      {/* Individual Student Evaluation Dialog */}
       <Dialog open={isEvalDialogOpen} onOpenChange={setIsEvalDialogOpen}>
         <DialogContent className="max-w-4xl max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Award className="w-5 h-5 text-yellow-600" />
-              <span>Edit Evaluation - {currentStudent?.email}</span>
+              <span>Manage Scores - {currentStudent?.email}</span>
             </DialogTitle>
             <DialogDescription>
               Manage partial scores and view total evaluation for this student.
@@ -1115,6 +1151,113 @@ const loadData = async () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setIsEvalDialogOpen(false)}>
               Close
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk CSV Upload Dialog */}
+      <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Upload className="w-5 h-5 text-green-600" />
+              <span>Bulk Add Scores</span>
+            </DialogTitle>
+            <DialogDescription>
+              Upload a CSV file with student emails and scores. The CSV should have 'email' and 'score' columns.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Evaluation Name
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g., Quiz 3, Final Exam"
+                value={bulkEvaluationName}
+                onChange={(e) => setBulkEvaluationName(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                CSV File
+              </label>
+              <Input
+                type="file"
+                accept=".csv"
+                onChange={(e) => setCsvFile(e.target.files[0])}
+                required
+              />
+            </div>
+            
+            <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
+              <strong>CSV Format:</strong><br />
+              email,score<br />
+              student1@example.com,85<br />
+              student2@example.com,92
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkUploadDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleBulkUploadSubmit} disabled={loading || !csvFile || !bulkEvaluationName.trim()}>
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
+              Upload Scores
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Bulk Delete Dialog */}
+      <Dialog open={isBulkDeleteDialogOpen} onOpenChange={setIsBulkDeleteDialogOpen}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center space-x-2">
+              <Trash2 className="w-5 h-5 text-red-600" />
+              <span>Bulk Delete a Score</span>
+            </DialogTitle>
+            <DialogDescription>
+              Delete a specific evaluation (by name) from ALL students. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Evaluation Name to Delete
+              </label>
+              <Input
+                type="text"
+                placeholder="e.g., Quiz 1, Assignment 2"
+                value={bulkDeleteScoreName}
+                onChange={(e) => setBulkDeleteScoreName(e.target.value)}
+                required
+              />
+            </div>
+            
+            <div className="text-sm text-red-600 bg-red-50 p-3 rounded border border-red-200">
+              <strong>Warning:</strong> This will remove the specified evaluation from ALL students who have it. This action cannot be undone.
+            </div>
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsBulkDeleteDialogOpen(false)}>
+              Cancel
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleBulkDeleteSubmit} 
+              disabled={loading || !bulkDeleteScoreName.trim()}
+            >
+              {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Trash2 className="w-4 h-4 mr-2" />}
+              Delete From All
             </Button>
           </DialogFooter>
         </DialogContent>
