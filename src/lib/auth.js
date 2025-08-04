@@ -1,5 +1,7 @@
 import { db } from './firebase';
-import { doc, getDoc, collection, getDocs, addDoc, deleteDoc, updateDoc, setDoc, serverTimestamp } from 'firebase/firestore';// Check if email is authorized for student access
+import { doc, getDoc, collection, getDocs, addDoc, deleteDoc, updateDoc, setDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+
+// Check if email is authorized for student access
 export const checkAuthorizedEmail = async (email) => {
   try {
     const authorizedEmailsRef = collection(db, 'authorizedEmails');
@@ -19,20 +21,20 @@ export const checkAuthorizedEmail = async (email) => {
 
 // Admin authentication (simple email/password check)
 export const authenticateAdmin = async (email, password) => {
-  try {
-    const adminRef = doc(db, 'admin', 'credentials');
-    const adminDoc = await getDoc(adminRef);
-    
-    if (adminDoc.exists()) {
-      const adminData = adminDoc.data();
-      // FIX: Compare both emails in lowercase to prevent case-sensitivity issues
-      return adminData.email.toLowerCase() === email.toLowerCase() && adminData.password === password;
-    }
-    return false;
-  } catch (error) {
-    console.error('Error authenticating admin:', error);
-    return false;
-  }
+  try {
+    const adminRef = doc(db, 'admin', 'credentials');
+    const adminDoc = await getDoc(adminRef);
+    
+    if (adminDoc.exists()) {
+      const adminData = adminDoc.data();
+      // FIX: Compare both emails in lowercase to prevent case-sensitivity issues
+      return adminData.email.toLowerCase() === email.toLowerCase() && adminData.password === password;
+    }
+    return false;
+  } catch (error) {
+    console.error('Error authenticating admin:', error);
+    return false;
+  }
 };
 
 // Get all authorized emails
@@ -117,19 +119,100 @@ export const updateDashboardContent = async (content) => {
   }
 };
 
-// Add or update a student evaluation
+// UPDATED: Add or update a student evaluation with new cumulative structure
 export const updateStudentEvaluation = async (evaluationData) => {
   try {
     // We use the student's email as the document ID
     const evalRef = doc(db, 'evaluations', evaluationData.studentEmail);
-    // setDoc will create the document if it doesn't exist, or overwrite it if it does.
-    await setDoc(evalRef, evaluationData);
+    
+    // For backward compatibility, if it's the old format, convert it
+    if (evaluationData.score !== undefined && !evaluationData.totalScore) {
+      // This is old format data, convert to new format
+      const newEvaluationData = {
+        studentEmail: evaluationData.studentEmail,
+        totalScore: evaluationData.score,
+        partialScores: [
+          {
+            name: "Initial Evaluation",
+            score: evaluationData.score,
+            date: evaluationData.evaluationDate || new Date().toISOString().split('T')[0]
+          }
+        ]
+      };
+      await setDoc(evalRef, newEvaluationData);
+    } else {
+      // This is new format data
+      await setDoc(evalRef, evaluationData);
+    }
+    
     return true;
   } catch (error) {
     console.error('Error updating evaluation:', error);
     return false;
   }
 };
+
+// NEW: Bulk add partial scores function
+export const bulkAddPartialScores = async (evaluationName, pastedData) => {
+  try {
+    const batch = writeBatch(db);
+    const lines = pastedData.trim().split('\n');
+    const currentDate = new Date().toISOString().split('T')[0];
+    
+    for (const line of lines) {
+      const [email, scoreStr] = line.split('\t').map(item => item.trim());
+      
+      if (!email || !scoreStr) continue;
+      
+      const score = parseFloat(scoreStr);
+      if (isNaN(score)) continue;
+      
+      const evalRef = doc(db, 'evaluations', email.toLowerCase());
+      
+      // Get existing evaluation data
+      const existingDoc = await getDoc(evalRef);
+      let evaluationData;
+      
+      if (existingDoc.exists()) {
+        evaluationData = existingDoc.data();
+        
+        // Ensure partialScores array exists
+        if (!evaluationData.partialScores) {
+          evaluationData.partialScores = [];
+        }
+      } else {
+        // Create new evaluation document
+        evaluationData = {
+          studentEmail: email.toLowerCase(),
+          totalScore: 0,
+          partialScores: []
+        };
+      }
+      
+      // Add new partial score
+      evaluationData.partialScores.push({
+        name: evaluationName,
+        score: score,
+        date: currentDate
+      });
+      
+      // Recalculate total score (average of all partial scores, capped at 100)
+      const totalScore = evaluationData.partialScores.reduce((sum, partial) => sum + partial.score, 0) / evaluationData.partialScores.length;
+      evaluationData.totalScore = Math.min(100, Math.round(totalScore * 100) / 100);
+      
+      // Add to batch
+      batch.set(evalRef, evaluationData);
+    }
+    
+    // Commit the batch
+    await batch.commit();
+    return true;
+  } catch (error) {
+    console.error('Error bulk adding partial scores:', error);
+    return false;
+  }
+};
+
 // Get a single student's evaluation by their email
 export const getStudentEvaluation = async (email) => {
   try {
@@ -163,6 +246,7 @@ export const submitLectureFeedback = async (feedbackData) => {
     return false;
   }
 };
+
 // Get all student feedback, sorted by newest first
 export const getAllFeedback = async () => {
   try {
@@ -176,6 +260,7 @@ export const getAllFeedback = async () => {
     return [];
   }
 };
+
 // Delete a project submission
 export const deleteSubmission = async (submissionId) => {
   try {
@@ -187,3 +272,4 @@ export const deleteSubmission = async (submissionId) => {
     return false;
   }
 };
+
