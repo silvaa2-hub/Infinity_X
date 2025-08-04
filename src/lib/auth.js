@@ -1,5 +1,5 @@
 import { db } from './firebase';
-import { doc, getDoc, collection, getDocs, addDoc, deleteDoc, updateDoc, setDoc, serverTimestamp, writeBatch } from 'firebase/firestore';
+import { doc, getDoc, collection, getDocs, addDoc, deleteDoc, updateDoc, setDoc, serverTimestamp, runTransaction } from 'firebase/firestore';
 
 // Check if email is authorized for student access
 export const checkAuthorizedEmail = async (email) => {
@@ -119,32 +119,13 @@ export const updateDashboardContent = async (content) => {
   }
 };
 
-// UPDATED: Add or update a student evaluation with new cumulative structure
+// Add or update a student evaluation
 export const updateStudentEvaluation = async (evaluationData) => {
   try {
     // We use the student's email as the document ID
     const evalRef = doc(db, 'evaluations', evaluationData.studentEmail);
-    
-    // For backward compatibility, if it's the old format, convert it
-    if (evaluationData.score !== undefined && !evaluationData.totalScore) {
-      // This is old format data, convert to new format
-      const newEvaluationData = {
-        studentEmail: evaluationData.studentEmail,
-        totalScore: evaluationData.score,
-        partialScores: [
-          {
-            name: "Initial Evaluation",
-            score: evaluationData.score,
-            date: evaluationData.evaluationDate || new Date().toISOString().split('T')[0]
-          }
-        ]
-      };
-      await setDoc(evalRef, newEvaluationData);
-    } else {
-      // This is new format data
-      await setDoc(evalRef, evaluationData);
-    }
-    
+    // setDoc will create the document if it doesn't exist, or overwrite it if it does.
+    await setDoc(evalRef, evaluationData);
     return true;
   } catch (error) {
     console.error('Error updating evaluation:', error);
@@ -152,30 +133,17 @@ export const updateStudentEvaluation = async (evaluationData) => {
   }
 };
 
-// NEW: Bulk add partial scores function
-export const bulkAddPartialScores = async (evaluationName, pastedData) => {
+// NEW: Add a single partial score to a student's evaluation
+export const addPartialScore = async (studentEmail, evaluationName, score) => {
   try {
-    const batch = writeBatch(db);
-    const lines = pastedData.trim().split('\n');
-    const currentDate = new Date().toISOString().split('T')[0];
+    const evalRef = doc(db, 'evaluations', studentEmail);
     
-    for (const line of lines) {
-      const [email, scoreStr] = line.split('\t').map(item => item.trim());
+    return await runTransaction(db, async (transaction) => {
+      const evalDoc = await transaction.get(evalRef);
       
-      if (!email || !scoreStr) continue;
-      
-      const score = parseFloat(scoreStr);
-      if (isNaN(score)) continue;
-      
-      const evalRef = doc(db, 'evaluations', email.toLowerCase());
-      
-      // Get existing evaluation data
-      const existingDoc = await getDoc(evalRef);
       let evaluationData;
-      
-      if (existingDoc.exists()) {
-        evaluationData = existingDoc.data();
-        
+      if (evalDoc.exists()) {
+        evaluationData = evalDoc.data();
         // Ensure partialScores array exists
         if (!evaluationData.partialScores) {
           evaluationData.partialScores = [];
@@ -183,32 +151,81 @@ export const bulkAddPartialScores = async (evaluationName, pastedData) => {
       } else {
         // Create new evaluation document
         evaluationData = {
-          studentEmail: email.toLowerCase(),
+          studentEmail: studentEmail,
           totalScore: 0,
           partialScores: []
         };
       }
       
-      // Add new partial score
-      evaluationData.partialScores.push({
+      // Add new partial score with unique ID
+      const newPartialScore = {
+        id: Date.now().toString(), // Use timestamp as unique ID
         name: evaluationName,
-        score: score,
-        date: currentDate
-      });
+        score: parseFloat(score),
+        date: new Date().toISOString().split('T')[0]
+      };
+      
+      evaluationData.partialScores.push(newPartialScore);
       
       // Recalculate total score (average of all partial scores, capped at 100)
       const totalScore = evaluationData.partialScores.reduce((sum, partial) => sum + partial.score, 0) / evaluationData.partialScores.length;
       evaluationData.totalScore = Math.min(100, Math.round(totalScore * 100) / 100);
       
-      // Add to batch
-      batch.set(evalRef, evaluationData);
-    }
-    
-    // Commit the batch
-    await batch.commit();
-    return true;
+      // Update the document
+      transaction.set(evalRef, evaluationData);
+      
+      return true;
+    });
   } catch (error) {
-    console.error('Error bulk adding partial scores:', error);
+    console.error('Error adding partial score:', error);
+    return false;
+  }
+};
+
+// NEW: Delete a specific partial score from a student's evaluation
+export const deletePartialScore = async (studentEmail, partialScoreId) => {
+  try {
+    const evalRef = doc(db, 'evaluations', studentEmail);
+    
+    return await runTransaction(db, async (transaction) => {
+      const evalDoc = await transaction.get(evalRef);
+      
+      if (!evalDoc.exists()) {
+        throw new Error('Student evaluation not found');
+      }
+      
+      const evaluationData = evalDoc.data();
+      
+      if (!evaluationData.partialScores || evaluationData.partialScores.length === 0) {
+        throw new Error('No partial scores found for this student');
+      }
+      
+      // Find and remove the partial score with matching ID
+      const updatedPartialScores = evaluationData.partialScores.filter(
+        partial => partial.id !== partialScoreId
+      );
+      
+      if (updatedPartialScores.length === evaluationData.partialScores.length) {
+        throw new Error('Partial score with specified ID not found');
+      }
+      
+      evaluationData.partialScores = updatedPartialScores;
+      
+      // Recalculate total score
+      if (evaluationData.partialScores.length > 0) {
+        const totalScore = evaluationData.partialScores.reduce((sum, partial) => sum + partial.score, 0) / evaluationData.partialScores.length;
+        evaluationData.totalScore = Math.min(100, Math.round(totalScore * 100) / 100);
+      } else {
+        evaluationData.totalScore = 0;
+      }
+      
+      // Update the document
+      transaction.set(evalRef, evaluationData);
+      
+      return true;
+    });
+  } catch (error) {
+    console.error('Error deleting partial score:', error);
     return false;
   }
 };
