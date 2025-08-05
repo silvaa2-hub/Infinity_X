@@ -54,7 +54,8 @@ import {
   Upload, // NEW: Icon for bulk upload
   Calendar,
   Target,
-  X
+  X,
+  BookOpen // Icon for Homework
 } from 'lucide-react';
 import Papa from 'papaparse'; // Import PapaParse
 
@@ -96,7 +97,8 @@ const AdminPanel = () => {
     lectures: [],
     materials: [],
     links: [],
-    notes: []
+    notes: [],
+    homeworks: [] // NEW: Add homeworks array
   });
   
   // Form states for adding new content
@@ -104,6 +106,7 @@ const AdminPanel = () => {
   const [newMaterial, setNewMaterial] = useState({ title: '', description: '', url: '', type: 'PDF' });
   const [newLink, setNewLink] = useState({ title: '', description: '', url: '' });
   const [newNote, setNewNote] = useState({ title: '', content: '', date: '' });
+  const [newHomework, setNewHomework] = useState({ title: '', description: '', url: '', dueDate: '' }); // NEW: Homework form state
 
   const fileInputRef = useRef(null); // Ref for the hidden file input
 
@@ -399,6 +402,31 @@ const loadData = async () => {
     setLoading(false);
   };
 
+  // NEW: Handle adding homework
+  const handleAddHomework = async (e) => {
+    e.preventDefault();
+    if (!newHomework.title || !newHomework.description || !newHomework.url || !newHomework.dueDate) return;
+
+    const updatedContent = {
+      ...content,
+      homeworks: [...(content.homeworks || []), { 
+        ...newHomework, 
+        id: Date.now().toString()
+      }]
+    };
+
+    setLoading(true);
+    const success = await updateDashboardContent(updatedContent);
+    if (success) {
+      setContent(updatedContent);
+      setNewHomework({ title: '', description: '', url: '', dueDate: '' });
+      showMessage('Homework added successfully!');
+    } else {
+      showMessage('Failed to add homework. Please try again.', true);
+    }
+    setLoading(false);
+  };
+
   const handleRemoveItem = async (type, itemId) => {
     const updatedContent = {
       ...content,
@@ -598,71 +626,87 @@ const loadData = async () => {
                 <span>Lectures</span>
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Manage lecture videos and their details.
+                Manage recorded lectures and video content
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <form onSubmit={handleAddLecture} className="space-y-4 mb-6">
-                <Input
-                  type="text"
-                  placeholder="Lecture Title"
-                  value={newLecture.title}
-                  onChange={(e) => setNewLecture({ ...newLecture, title: e.target.value })}
-                  required
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    placeholder="Lecture title"
+                    value={newLecture.title}
+                    onChange={(e) => setNewLecture({ ...newLecture, title: e.target.value })}
+                    className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                  />
+                  <Input
+                    placeholder="Duration (e.g., 45 min)"
+                    value={newLecture.duration}
+                    onChange={(e) => setNewLecture({ ...newLecture, duration: e.target.value })}
+                    className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                  />
+                </div>
                 <Textarea
-                  placeholder="Description"
+                  placeholder="Lecture description"
                   value={newLecture.description}
                   onChange={(e) => setNewLecture({ ...newLecture, description: e.target.value })}
+                  className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
                 />
-                <Input
-                  type="url"
-                  placeholder="Video URL"
-                  value={newLecture.url}
-                  onChange={(e) => setNewLecture({ ...newLecture, url: e.target.value })}
-                  required
-                />
-                <Input
-                  type="text"
-                  placeholder="Duration (e.g., 1h 30m)"
-                  value={newLecture.duration}
-                  onChange={(e) => setNewLecture({ ...newLecture, duration: e.target.value })}
-                />
-                <Input
-                  type="date"
-                  placeholder="Date"
-                  value={newLecture.date}
-                  onChange={(e) => setNewLecture({ ...newLecture, date: e.target.value })}
-                />
-                <Button type="submit" disabled={loading} className="w-full bg-purple-600 hover:bg-purple-700">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    placeholder="Video URL"
+                    value={newLecture.url}
+                    onChange={(e) => setNewLecture({ ...newLecture, url: e.target.value })}
+                    className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                  />
+                  <Input
+                    type="date"
+                    placeholder="Date"
+                    value={newLecture.date}
+                    onChange={(e) => setNewLecture({ ...newLecture, date: e.target.value })}
+                    className="border-gray-300 focus:border-purple-500 focus:ring-purple-500"
+                  />
+                </div>
+                <Button type="submit" disabled={loading} className="bg-purple-600 hover:bg-purple-700 text-white">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   <span className="ml-2">Add Lecture</span>
                 </Button>
               </form>
 
               <div className="space-y-3">
-                {content.lectures.map((lecture) => (
-                  <div key={lecture.id} className="flex items-center justify-between p-4 bg-gray-50/80 rounded-lg border">
-                    <div>
-                      <div className="font-medium text-gray-800">{lecture.title}</div>
-                      <div className="text-sm text-gray-600">{lecture.description}</div>
-                      <a href={lecture.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">View Video</a>
+                {content.lectures && content.lectures.map((lecture) => (
+                  <div key={lecture.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-purple-50/50 rounded-lg border border-purple-200 hover:bg-purple-100/50 transition-colors">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-800 mb-1">{lecture.title}</h3>
+                      <p className="text-sm text-gray-600 mb-2">{lecture.description}</p>
+                      <div className="flex items-center space-x-4 text-xs text-gray-500">
+                        <span>Duration: {lecture.duration || 'N/A'}</span>
+                        <span>Date: {lecture.date || 'N/A'}</span>
+                      </div>
                     </div>
-                    <Button
-                      onClick={() => handleRemoveItem('lectures', lecture.id)}
-                      variant="destructive"
-                      size="sm"
-                      disabled={loading}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                      {lecture.url && (
+                        <a href={lecture.url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </a>
+                      )}
+                      <Button
+                        onClick={() => handleRemoveItem('lectures', lecture.id)}
+                        variant="destructive"
+                        size="sm"
+                        disabled={loading}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
-                {content.lectures.length === 0 && (
+                {(!content.lectures || content.lectures.length === 0) && (
                   <div className="text-center py-12">
                     <Video className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg">No lectures added yet</p>
-                    <p className="text-gray-400 text-sm">Add new lecture content</p>
+                    <p className="text-gray-500 text-lg">No lectures yet</p>
+                    <p className="text-gray-400 text-sm">Add your first lecture above</p>
                   </div>
                 )}
               </div>
@@ -673,71 +717,89 @@ const loadData = async () => {
       case 'materials':
         return (
           <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
-            <CardHeader className="bg-gradient-to-r from-green-50 to-teal-50 rounded-t-lg">
+            <CardHeader className="bg-gradient-to-r from-green-50 to-emerald-50 rounded-t-lg">
               <CardTitle className="flex items-center space-x-2 text-gray-800">
                 <FileText className="w-5 h-5 text-green-600" />
                 <span>Materials</span>
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Manage study materials and resources.
+                Manage course materials and documents
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <form onSubmit={handleAddMaterial} className="space-y-4 mb-6">
-                <Input
-                  type="text"
-                  placeholder="Material Title"
-                  value={newMaterial.title}
-                  onChange={(e) => setNewMaterial({ ...newMaterial, title: e.target.value })}
-                  required
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    placeholder="Material title"
+                    value={newMaterial.title}
+                    onChange={(e) => setNewMaterial({ ...newMaterial, title: e.target.value })}
+                    className="border-gray-300 focus:border-green-500 focus:ring-green-500"
+                  />
+                  <select
+                    value={newMaterial.type}
+                    onChange={(e) => setNewMaterial({ ...newMaterial, type: e.target.value })}
+                    className="px-3 py-2 border border-gray-300 rounded-md focus:border-green-500 focus:ring-green-500"
+                  >
+                    <option value="PDF">PDF</option>
+                    <option value="DOC">DOC</option>
+                    <option value="PPT">PPT</option>
+                    <option value="Other">Other</option>
+                  </select>
+                </div>
                 <Textarea
-                  placeholder="Description"
+                  placeholder="Material description"
                   value={newMaterial.description}
                   onChange={(e) => setNewMaterial({ ...newMaterial, description: e.target.value })}
+                  className="border-gray-300 focus:border-green-500 focus:ring-green-500"
                 />
                 <Input
-                  type="url"
-                  placeholder="Material URL (PDF, Doc, etc.)"
+                  placeholder="Download URL"
                   value={newMaterial.url}
                   onChange={(e) => setNewMaterial({ ...newMaterial, url: e.target.value })}
-                  required
+                  className="border-gray-300 focus:border-green-500 focus:ring-green-500"
                 />
-                <Input
-                  type="text"
-                  placeholder="Type (e.g., PDF, DOCX)"
-                  value={newMaterial.type}
-                  onChange={(e) => setNewMaterial({ ...newMaterial, type: e.target.value })}
-                />
-                <Button type="submit" disabled={loading} className="w-full bg-green-600 hover:bg-green-700">
+                <Button type="submit" disabled={loading} className="bg-green-600 hover:bg-green-700 text-white">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   <span className="ml-2">Add Material</span>
                 </Button>
               </form>
 
               <div className="space-y-3">
-                {content.materials.map((material) => (
-                  <div key={material.id} className="flex items-center justify-between p-4 bg-gray-50/80 rounded-lg border">
-                    <div>
-                      <div className="font-medium text-gray-800">{material.title}</div>
-                      <div className="text-sm text-gray-600">{material.description}</div>
-                      <a href={material.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">View Material ({material.type})</a>
+                {content.materials && content.materials.map((material) => (
+                  <div key={material.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-green-50/50 rounded-lg border border-green-200 hover:bg-green-100/50 transition-colors">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2 mb-1">
+                        <h3 className="font-medium text-gray-800">{material.title}</h3>
+                        <Badge variant="outline" className="border-green-300 text-green-700 text-xs">
+                          {material.type}
+                        </Badge>
+                      </div>
+                      <p className="text-sm text-gray-600">{material.description}</p>
                     </div>
-                    <Button
-                      onClick={() => handleRemoveItem('materials', material.id)}
-                      variant="destructive"
-                      size="sm"
-                      disabled={loading}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                      {material.url && (
+                        <a href={material.url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </a>
+                      )}
+                      <Button
+                        onClick={() => handleRemoveItem('materials', material.id)}
+                        variant="destructive"
+                        size="sm"
+                        disabled={loading}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
-                {content.materials.length === 0 && (
+                {(!content.materials || content.materials.length === 0) && (
                   <div className="text-center py-12">
                     <FileText className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg">No materials added yet</p>
-                    <p className="text-gray-400 text-sm">Add new study materials</p>
+                    <p className="text-gray-500 text-lg">No materials yet</p>
+                    <p className="text-gray-400 text-sm">Add your first material above</p>
                   </div>
                 )}
               </div>
@@ -748,65 +810,72 @@ const loadData = async () => {
       case 'links':
         return (
           <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
-            <CardHeader className="bg-gradient-to-r from-blue-50 to-cyan-50 rounded-t-lg">
+            <CardHeader className="bg-gradient-to-r from-cyan-50 to-blue-50 rounded-t-lg">
               <CardTitle className="flex items-center space-x-2 text-gray-800">
-                <ExternalLink className="w-5 h-5 text-blue-600" />
+                <ExternalLink className="w-5 h-5 text-cyan-600" />
                 <span>Important Links</span>
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Manage external links for students.
+                Manage important external links and resources
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <form onSubmit={handleAddLink} className="space-y-4 mb-6">
                 <Input
-                  type="text"
-                  placeholder="Link Title"
+                  placeholder="Link title"
                   value={newLink.title}
                   onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
-                  required
+                  className="border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
                 />
                 <Textarea
-                  placeholder="Description"
+                  placeholder="Link description"
                   value={newLink.description}
                   onChange={(e) => setNewLink({ ...newLink, description: e.target.value })}
+                  className="border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
                 />
                 <Input
-                  type="url"
                   placeholder="URL"
                   value={newLink.url}
                   onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
-                  required
+                  className="border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
                 />
-                <Button type="submit" disabled={loading} className="w-full bg-blue-600 hover:bg-blue-700">
+                <Button type="submit" disabled={loading} className="bg-cyan-600 hover:bg-cyan-700 text-white">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   <span className="ml-2">Add Link</span>
                 </Button>
               </form>
 
               <div className="space-y-3">
-                {content.links.map((link) => (
-                  <div key={link.id} className="flex items-center justify-between p-4 bg-gray-50/80 rounded-lg border">
-                    <div>
-                      <div className="font-medium text-gray-800">{link.title}</div>
-                      <div className="text-sm text-gray-600">{link.description}</div>
-                      <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">Go to Link</a>
+                {content.links && content.links.map((link) => (
+                  <div key={link.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-cyan-50/50 rounded-lg border border-cyan-200 hover:bg-cyan-100/50 transition-colors">
+                    <div className="flex-1">
+                      <h3 className="font-medium text-gray-800 mb-1">{link.title}</h3>
+                      <p className="text-sm text-gray-600">{link.description}</p>
                     </div>
-                    <Button
-                      onClick={() => handleRemoveItem('links', link.id)}
-                      variant="destructive"
-                      size="sm"
-                      disabled={loading}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                      {link.url && (
+                        <a href={link.url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </a>
+                      )}
+                      <Button
+                        onClick={() => handleRemoveItem('links', link.id)}
+                        variant="destructive"
+                        size="sm"
+                        disabled={loading}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 ))}
-                {content.links.length === 0 && (
+                {(!content.links || content.links.length === 0) && (
                   <div className="text-center py-12">
                     <ExternalLink className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg">No links added yet</p>
-                    <p className="text-gray-400 text-sm">Add important external links</p>
+                    <p className="text-gray-500 text-lg">No links yet</p>
+                    <p className="text-gray-400 text-sm">Add your first link above</p>
                   </div>
                 )}
               </div>
@@ -823,53 +892,152 @@ const loadData = async () => {
                 <span>Notes</span>
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Manage general notes or announcements.
+                Manage instructor notes and announcements
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <form onSubmit={handleAddNote} className="space-y-4 mb-6">
                 <Input
-                  type="text"
-                  placeholder="Note Title"
+                  placeholder="Note title"
                   value={newNote.title}
                   onChange={(e) => setNewNote({ ...newNote, title: e.target.value })}
-                  required
+                  className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                 />
                 <Textarea
-                  placeholder="Note Content"
+                  placeholder="Note content"
                   value={newNote.content}
                   onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
-                  required
+                  rows={4}
+                  className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
                 />
-                <Button type="submit" disabled={loading} className="w-full bg-indigo-600 hover:bg-indigo-700">
+                <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                   <span className="ml-2">Add Note</span>
                 </Button>
               </form>
 
               <div className="space-y-3">
-                {content.notes.map((note) => (
-                  <div key={note.id} className="flex items-center justify-between p-4 bg-gray-50/80 rounded-lg border">
-                    <div>
-                      <div className="font-medium text-gray-800">{note.title}</div>
-                      <div className="text-sm text-gray-600">{note.content}</div>
-                      <div className="text-xs text-gray-500">{note.date}</div>
+                {content.notes && content.notes.map((note) => (
+                  <div key={note.id} className="p-4 bg-indigo-50/50 rounded-lg border border-indigo-200 hover:bg-indigo-100/50 transition-colors">
+                    <div className="flex items-start justify-between mb-2">
+                      <h3 className="font-medium text-gray-800">{note.title}</h3>
+                      <div className="flex items-center space-x-2">
+                        <span className="text-xs text-gray-500">{note.date}</span>
+                        <Button
+                          onClick={() => handleRemoveItem('notes', note.id)}
+                          variant="destructive"
+                          size="sm"
+                          disabled={loading}
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
+                      </div>
                     </div>
-                    <Button
-                      onClick={() => handleRemoveItem('notes', note.id)}
-                      variant="destructive"
-                      size="sm"
-                      disabled={loading}
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </Button>
+                    <p className="text-sm text-gray-600 whitespace-pre-wrap">{note.content}</p>
                   </div>
                 ))}
-                {content.notes.length === 0 && (
+                {(!content.notes || content.notes.length === 0) && (
                   <div className="text-center py-12">
                     <StickyNote className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                    <p className="text-gray-500 text-lg">No notes added yet</p>
-                    <p className="text-gray-400 text-sm">Add general notes or announcements</p>
+                    <p className="text-gray-500 text-lg">No notes yet</p>
+                    <p className="text-gray-400 text-sm">Add your first note above</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      // NEW: Homework case
+      case 'homework':
+        return (
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-t-lg">
+              <CardTitle className="flex items-center space-x-2 text-gray-800">
+                <BookOpen className="w-5 h-5 text-amber-600" />
+                <span>Homework</span>
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Manage homework assignments for students
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              <form onSubmit={handleAddHomework} className="space-y-4 mb-6">
+                <Input
+                  placeholder="Homework title (e.g., Homework 1: Introduction to Python)"
+                  value={newHomework.title}
+                  onChange={(e) => setNewHomework({ ...newHomework, title: e.target.value })}
+                  className="border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                  required
+                />
+                <Textarea
+                  placeholder="Homework description (e.g., Complete the first 5 exercises on the linked platform.)"
+                  value={newHomework.description}
+                  onChange={(e) => setNewHomework({ ...newHomework, description: e.target.value })}
+                  className="border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                  required
+                />
+                <Input
+                  placeholder="Homework URL (e.g., http://link.to.the.homework)"
+                  value={newHomework.url}
+                  onChange={(e) => setNewHomework({ ...newHomework, url: e.target.value })}
+                  className="border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                  required
+                />
+                <Input
+                  type="date"
+                  placeholder="Due Date"
+                  value={newHomework.dueDate}
+                  onChange={(e) => setNewHomework({ ...newHomework, dueDate: e.target.value })}
+                  className="border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                  required
+                />
+                <Button type="submit" disabled={loading} className="bg-amber-600 hover:bg-amber-700 text-white">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  <span className="ml-2">Add Homework</span>
+                </Button>
+              </form>
+
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Existing Homeworks</h3>
+                {content.homeworks && content.homeworks.map((homework) => (
+                  <div key={homework.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-amber-50/50 rounded-lg border border-amber-200 hover:bg-amber-100/50 transition-colors">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-800 mb-1">{homework.title}</h4>
+                      <p className="text-sm text-gray-600 mb-2">{homework.description}</p>
+                      <div className="flex items-center space-x-4 text-xs text-gray-500">
+                        <span>Due: {homework.dueDate}</span>
+                        {homework.url && (
+                          <a href={homework.url} target="_blank" rel="noopener noreferrer" className="text-amber-600 hover:text-amber-700">
+                            View Assignment
+                          </a>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                      {homework.url && (
+                        <a href={homework.url} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </a>
+                      )}
+                      <Button
+                        onClick={() => handleRemoveItem('homeworks', homework.id)}
+                        variant="destructive"
+                        size="sm"
+                        disabled={loading}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {(!content.homeworks || content.homeworks.length === 0) && (
+                  <div className="text-center py-12">
+                    <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No homework assignments yet</p>
+                    <p className="text-gray-400 text-sm">Add your first homework assignment above</p>
                   </div>
                 )}
               </div>
@@ -878,22 +1046,7 @@ const loadData = async () => {
         );
 
       case 'drive-sync':
-        return (
-          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
-            <CardHeader className="bg-gradient-to-r from-teal-50 to-cyan-50 rounded-t-lg">
-              <CardTitle className="flex items-center space-x-2 text-gray-800">
-                <Cloud className="w-5 h-5 text-teal-600" />
-                <span>Google Drive Sync</span>
-              </CardTitle>
-              <CardDescription className="text-gray-600">
-                Synchronize content with Google Drive.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="p-6">
-              <GoogleDriveSync />
-            </CardContent>
-          </Card>
-        );
+        return <GoogleDriveSync />;
 
       case 'submissions':
         return (
@@ -901,42 +1054,88 @@ const loadData = async () => {
             <CardHeader className="bg-gradient-to-r from-orange-50 to-red-50 rounded-t-lg">
               <CardTitle className="flex items-center space-x-2 text-gray-800">
                 <Briefcase className="w-5 h-5 text-orange-600" />
-                <span>Submissions</span>
+                <span>Student Submissions</span>
               </CardTitle>
               <CardDescription className="text-gray-600">
-                View and manage student project submissions.
+                View and manage student project submissions
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {submissions.length > 0 ? (
                   submissions.map((submission) => (
-                    <div key={submission.id} className="flex items-center justify-between p-4 bg-gray-50/80 rounded-lg border">
-                      <div>
-                        <div className="font-medium text-gray-800">{submission.studentEmail}</div>
-                        <div className="text-sm text-gray-600">Project: {submission.projectName}</div>
-                        <a href={submission.driveLink} target="_blank" rel="noopener noreferrer" className="text-blue-500 hover:underline text-sm">View Submission</a>
-                        {submission.submittedAt && (
-                          <div className="text-xs text-gray-500 mt-1">
-                            Submitted: {new Date(submission.submittedAt.toDate()).toLocaleString()}
-                          </div>
-                        )}
+                    <div key={submission.id} className="p-4 bg-orange-50/50 rounded-lg border border-orange-200 hover:bg-orange-100/50 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3">
+                        <div className="flex-1">
+                          <h3 className="font-medium text-gray-800 mb-1">{submission.projectTitle || 'Untitled Project'}</h3>
+                          <p className="text-sm text-gray-600">Student: {submission.studentEmail}</p>
+                          <p className="text-xs text-gray-500">Submitted: {submission.submittedAt ? new Date(submission.submittedAt.toDate()).toLocaleString() : 'Unknown'}</p>
+                        </div>
+                        <Button
+                          onClick={() => handleDeleteSubmission(submission.id)}
+                          variant="destructive"
+                          size="sm"
+                          disabled={loading}
+                          className="mt-2 sm:mt-0"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </Button>
                       </div>
-                      <Button
-                        onClick={() => handleDeleteSubmission(submission.id)}
-                        variant="destructive"
-                        size="sm"
-                        disabled={loading}
-                      >
-                        <Trash2 className="w-4 h-4" />
-                      </Button>
+                      
+                      {submission.description && (
+                        <div className="mb-3">
+                          <h4 className="text-sm font-medium text-gray-700 mb-1">Description:</h4>
+                          <p className="text-sm text-gray-600">{submission.description}</p>
+                        </div>
+                      )}
+                      
+                      {submission.githubUrl && (
+                        <div className="mb-3">
+                          <h4 className="text-sm font-medium text-gray-700 mb-1">GitHub Repository:</h4>
+                          <a 
+                            href={submission.githubUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                          >
+                            {submission.githubUrl}
+                          </a>
+                        </div>
+                      )}
+                      
+                      {submission.liveUrl && (
+                        <div className="mb-3">
+                          <h4 className="text-sm font-medium text-gray-700 mb-1">Live Demo:</h4>
+                          <a 
+                            href={submission.liveUrl} 
+                            target="_blank" 
+                            rel="noopener noreferrer"
+                            className="text-sm text-blue-600 hover:text-blue-800 underline break-all"
+                          >
+                            {submission.liveUrl}
+                          </a>
+                        </div>
+                      )}
+                      
+                      {submission.technologies && submission.technologies.length > 0 && (
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700 mb-1">Technologies Used:</h4>
+                          <div className="flex flex-wrap gap-1">
+                            {submission.technologies.map((tech, index) => (
+                              <Badge key={index} variant="outline" className="text-xs">
+                                {tech}
+                              </Badge>
+                            ))}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   ))
                 ) : (
                   <div className="text-center py-12">
                     <Briefcase className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500 text-lg">No submissions yet</p>
-                    <p className="text-gray-400 text-sm">Students will submit their projects here</p>
+                    <p className="text-gray-400 text-sm">Student submissions will appear here</p>
                   </div>
                 )}
               </div>
@@ -947,26 +1146,55 @@ const loadData = async () => {
       case 'feedback':
         return (
           <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
-            <CardHeader className="bg-gradient-to-r from-pink-50 to-red-50 rounded-t-lg">
+            <CardHeader className="bg-gradient-to-r from-pink-50 to-rose-50 rounded-t-lg">
               <CardTitle className="flex items-center space-x-2 text-gray-800">
                 <MessageSquare className="w-5 h-5 text-pink-600" />
                 <span>Student Feedback</span>
               </CardTitle>
               <CardDescription className="text-gray-600">
-                View and manage feedback submitted by students.
+                View feedback submitted by students
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {feedback.length > 0 ? (
-                  feedback.map((fb) => (
-                    <div key={fb.id} className="p-4 bg-gray-50/80 rounded-lg border">
-                      <div className="font-medium text-gray-800">From: {fb.studentEmail}</div>
-                      <div className="text-sm text-gray-600">Rating: {fb.rating} <Star className="w-4 h-4 inline-block text-yellow-500 fill-yellow-500" /></div>
-                      <div className="text-sm text-gray-600">Feedback: {fb.feedback}</div>
-                      {fb.submittedAt && (
-                        <div className="text-xs text-gray-500 mt-1">
-                          Submitted: {new Date(fb.submittedAt.toDate()).toLocaleString()}
+                  feedback.map((feedbackItem) => (
+                    <div key={feedbackItem.id} className="p-4 bg-pink-50/50 rounded-lg border border-pink-200 hover:bg-pink-100/50 transition-colors">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3">
+                        <div className="flex-1">
+                          <div className="flex items-center space-x-2 mb-2">
+                            <h3 className="font-medium text-gray-800">{feedbackItem.type || 'General Feedback'}</h3>
+                            <div className="flex items-center">
+                              {[...Array(5)].map((_, i) => (
+                                <Star
+                                  key={i}
+                                  className={`w-4 h-4 ${
+                                    i < (feedbackItem.rating || 0)
+                                      ? 'text-yellow-400 fill-current'
+                                      : 'text-gray-300'
+                                  }`}
+                                />
+                              ))}
+                            </div>
+                          </div>
+                          <p className="text-sm text-gray-600 mb-1">From: {feedbackItem.studentEmail}</p>
+                          <p className="text-xs text-gray-500 mb-3">
+                            Submitted: {feedbackItem.submittedAt ? new Date(feedbackItem.submittedAt.toDate()).toLocaleString() : 'Unknown'}
+                          </p>
+                        </div>
+                      </div>
+                      
+                      {feedbackItem.feedback && (
+                        <div className="mb-3">
+                          <h4 className="text-sm font-medium text-gray-700 mb-1">Feedback:</h4>
+                          <p className="text-sm text-gray-600 whitespace-pre-wrap">{feedbackItem.feedback}</p>
+                        </div>
+                      )}
+                    
+                      {feedbackItem.suggestions && (
+                        <div>
+                          <h4 className="text-sm font-medium text-gray-700 mb-1">Suggestions:</h4>
+                          <p className="text-sm text-gray-600 whitespace-pre-wrap">{feedbackItem.suggestions}</p>
                         </div>
                       )}
                     </div>
@@ -975,7 +1203,7 @@ const loadData = async () => {
                   <div className="text-center py-12">
                     <MessageSquare className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500 text-lg">No feedback yet</p>
-                    <p className="text-gray-400 text-sm">Students can submit feedback from their dashboard</p>
+                    <p className="text-gray-400 text-sm">Student feedback will appear here</p>
                   </div>
                 )}
               </div>
@@ -984,20 +1212,22 @@ const loadData = async () => {
         );
 
       default:
-        return <div>Select a tab</div>;
+        return null;
     }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50">
+    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
       {/* Header */}
-      <div className="bg-white/90 backdrop-blur-lg shadow-lg border-b border-gray-200/50 sticky top-0 z-40">
+      <div className="bg-white/80 backdrop-blur-lg shadow-sm border-b border-gray-200/50 sticky top-0 z-10">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between items-center py-4">
+          <div className="flex justify-between items-center h-16">
             <div className="flex items-center space-x-3">
-              <Shield className="w-8 h-8 text-blue-600" />
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-600 to-indigo-600 rounded-lg flex items-center justify-center shadow-lg">
+                <Shield className="w-6 h-6 text-white" />
+              </div>
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">Admin Panel</h1>
+                <h1 className="text-xl font-bold text-gray-900">Admin Panel</h1>
                 <p className="text-sm text-gray-600">Welcome, {user?.email}</p>
               </div>
             </div>
@@ -1040,13 +1270,16 @@ const loadData = async () => {
           <TabButton value="notes" isActive={activeTab === 'notes'} onClick={setActiveTab} icon={StickyNote} colorScheme="indigo">
             Notes
           </TabButton>
+          <TabButton value="homework" isActive={activeTab === 'homework'} onClick={setActiveTab} icon={BookOpen} colorScheme="amber">
+            Homework
+          </TabButton>
           <TabButton value="drive-sync" isActive={activeTab === 'drive-sync'} onClick={setActiveTab} icon={Cloud} colorScheme="teal">
             Drive Sync
           </TabButton>
-          <TabButton value="submissions" isActive={activeTab === 'submissions'} onClick={setActiveTab} icon={Briefcase} colorScheme="orange">
+          <TabButton value="submissions" isActive={activeTab === 'submissions'} onClick={setActiveTab} icon={Briefcase} colorScheme="red">
             Submissions
           </TabButton>
-          <TabButton value="feedback" isActive={activeTab === 'feedback'} onClick={setActiveTab} icon={MessageSquare} colorScheme="pink">
+          <TabButton value="feedback" isActive={activeTab === 'feedback'} onClick={setActiveTab} icon={MessageSquare} colorScheme="cyan">
             Feedback
           </TabButton>
         </div>

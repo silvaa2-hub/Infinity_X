@@ -30,7 +30,8 @@ import {
   Award,
   UploadCloud,
   Menu,
-  MessageSquare
+  MessageSquare,
+  Target // Icon for Homework
 } from 'lucide-react';
 
 const StudentDashboard = () => {
@@ -39,7 +40,8 @@ const StudentDashboard = () => {
     lectures: [],
     materials: [],
     links: [],
-    notes: []
+    notes: [],
+    homeworks: [] // NEW: Add homeworks array
   });
   const [loading, setLoading] = useState(true);
 
@@ -161,8 +163,8 @@ const StudentDashboard = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="lectures" className="w-full animate-in fade-in slide-in-from-top-8 duration-500">
-          {/* Tab List - Responsive */}
-          <TabsList className="bg-slate-800/50 border border-slate-700 w-full grid grid-cols-2 sm:grid-cols-4 gap-1 h-auto p-1">
+          {/* Tab List - Responsive - Updated to include Homework */}
+          <TabsList className="bg-slate-800/50 border border-slate-700 w-full grid grid-cols-2 sm:grid-cols-5 gap-1 h-auto p-1">
             <TabsTrigger 
               value="lectures" 
               className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 text-slate-300 py-2 px-1 text-xs sm:text-sm"
@@ -176,6 +178,13 @@ const StudentDashboard = () => {
             >
               <FileText className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="text-center leading-tight">Lecture<br className="sm:hidden" /> Materials</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="homework" 
+              className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 text-slate-300 py-2 px-1 text-xs sm:text-sm"
+            >
+              <Target className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center leading-tight">Homework<br className="sm:hidden" /> Assignments</span>
             </TabsTrigger>
             <TabsTrigger 
               value="links" 
@@ -286,6 +295,55 @@ const StudentDashboard = () => {
             </div>
           </TabsContent>
 
+          {/* NEW: Homework Tab */}
+          <TabsContent value="homework" className="mt-4 sm:mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              {content.homeworks && content.homeworks.length > 0 ? (
+                content.homeworks.map((homework, index) => (
+                  <Card 
+                    key={index} 
+                    className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white hover:border-slate-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-4" 
+                    style={{animationDelay: `${index * 100}ms`}}
+                  >
+                    <CardHeader className="pb-3 p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between space-y-2 sm:space-y-0">
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg flex items-center space-x-2 text-slate-50 break-words">
+                            <Target className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 flex-shrink-0" />
+                            <span className="min-w-0">{homework.title}</span>
+                          </CardTitle>
+                          <CardDescription className="mt-1 text-slate-400 text-sm break-words">{homework.description}</CardDescription>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6 pt-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+                        <div className="flex items-center space-x-2 text-sm text-slate-400">
+                          <Calendar className="w-4 h-4 flex-shrink-0" />
+                          <span className="truncate">Due: {homework.dueDate || 'No due date'}</span>
+                        </div>
+                        <a href={homework.url} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+                          <Button size="sm" className="flex items-center justify-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white w-full sm:w-auto">
+                            <ExternalLink className="w-4 h-4" />
+                            <span>Start Assignment</span>
+                          </Button>
+                        </a>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card className="lg:col-span-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800">
+                  <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center p-4">
+                    <Target className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mb-4" />
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-300">No Homework Available</h3>
+                    <p className="text-slate-500 text-sm sm:text-base">New homework assignments will appear here when available.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
           {/* Links Tab */}
           <TabsContent value="links" className="mt-4 sm:mt-6">
             <Card className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white">
@@ -308,15 +366,17 @@ const StudentDashboard = () => {
                             )}
                           </div>
                         </a>
-                        {index < content.links.length - 1 && <Separator className="bg-slate-700" />}
+                        {index < content.links.length - 1 && (
+                          <Separator className="bg-slate-700/50 my-2 sm:my-3" />
+                        )}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <div className="text-center py-6 sm:py-8">
-                    <ExternalLink className="w-6 h-6 sm:w-8 sm:h-8 text-slate-600 mx-auto mb-3" />
+                  <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
+                    <ExternalLink className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mb-4" />
                     <h3 className="text-base sm:text-lg font-semibold text-slate-300">No Links Available</h3>
-                    <p className="text-slate-500 text-sm sm:text-base">Important links will be posted here.</p>
+                    <p className="text-slate-500 text-sm sm:text-base">Important links will be shared here as needed.</p>
                   </div>
                 )}
               </CardContent>
@@ -325,33 +385,36 @@ const StudentDashboard = () => {
 
           {/* Notes Tab */}
           <TabsContent value="notes" className="mt-4 sm:mt-6">
-            <div className="space-y-3 sm:space-y-4">
+            <div className="space-y-4 sm:space-y-6">
               {content.notes && content.notes.length > 0 ? (
                 content.notes.map((note, index) => (
-                  <Card key={index} className="overflow-hidden bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white">
-                    <div className="p-3 sm:p-4 bg-amber-900/10 border-l-4 border-amber-500">
-                      <div className="flex items-start space-x-3">
-                        <StickyNote className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 mt-0.5 flex-shrink-0" />
-                        <div className="flex-1 min-w-0">
-                          <h4 className="font-medium text-slate-50 mb-1 text-sm sm:text-base break-words">{note.title}</h4>
-                          <p className="text-xs sm:text-sm text-slate-300 break-words leading-relaxed">{note.content}</p>
-                          {note.date && (
-                            <div className="flex items-center space-x-1 mt-2 text-xs text-slate-400">
-                              <Clock className="w-3 h-3 flex-shrink-0" />
-                              <span>{note.date}</span>
-                            </div>
-                          )}
-                        </div>
+                  <Card 
+                    key={index} 
+                    className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white hover:border-slate-500 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4" 
+                    style={{animationDelay: `${index * 100}ms`}}
+                  >
+                    <CardHeader className="pb-3 p-4 sm:p-6">
+                      <div className="flex flex-col sm:flex-row sm:items-start justify-between space-y-2 sm:space-y-0">
+                        <CardTitle className="text-base sm:text-lg flex items-center space-x-2 text-slate-50 break-words">
+                          <StickyNote className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 flex-shrink-0" />
+                          <span className="min-w-0">{note.title}</span>
+                        </CardTitle>
+                        <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs self-start sm:ml-2 flex-shrink-0">
+                          {note.date || 'No date'}
+                        </Badge>
                       </div>
-                    </div>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6 pt-0">
+                      <p className="text-sm sm:text-base text-slate-300 whitespace-pre-wrap break-words">{note.content}</p>
+                    </CardContent>
                   </Card>
                 ))
               ) : (
                 <Card className="bg-slate-900/50 backdrop-blur-sm border border-slate-800">
-                  <CardContent className="text-center py-8 sm:py-12 p-4">
-                    <StickyNote className="w-6 h-6 sm:w-8 sm:h-8 text-slate-600 mx-auto mb-3" />
+                  <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center p-4">
+                    <StickyNote className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mb-4" />
                     <h3 className="text-base sm:text-lg font-semibold text-slate-300">No Notes Available</h3>
-                    <p className="text-slate-500 text-sm sm:text-base">Check back for notes from your instructor.</p>
+                    <p className="text-slate-500 text-sm sm:text-base">Instructor notes and announcements will appear here.</p>
                   </CardContent>
                 </Card>
               )}
