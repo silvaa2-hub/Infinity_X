@@ -55,7 +55,8 @@ import {
   Calendar,
   Target,
   X,
-  BookOpen // Icon for Homework
+  BookOpen,
+  Download 
 } from 'lucide-react';
 import Papa from 'papaparse'; // Import PapaParse
 
@@ -1071,17 +1072,23 @@ const loadData = async () => {
                           <p className="text-sm text-gray-600">Student: {submission.studentEmail}</p>
                           <p className="text-xs text-gray-500">Submitted: {submission.submittedAt ? new Date(submission.submittedAt.toDate()).toLocaleString() : 'Unknown'}</p>
                         </div>
-                        <Button
-                          onClick={() => handleDeleteSubmission(submission.id)}
-                          variant="destructive"
-                          size="sm"
-                          disabled={loading}
-                          className="mt-2 sm:mt-0"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center space-x-2 mt-2 sm:mt-0">
+                          <a href={submission.fileUrl} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm" className="flex items-center space-x-1">
+                              <Download className="w-4 h-4" />
+                              <span>Download</span>
+                            </Button>
+                          </a>
+                          <Button
+                            onClick={() => handleDeleteSubmission(submission.id)}
+                            variant="destructive"
+                            size="sm"
+                            disabled={loading}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </div>
-                      
                       {submission.description && (
                         <div className="mb-3">
                           <h4 className="text-sm font-medium text-gray-700 mb-1">Description:</h4>
