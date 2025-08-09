@@ -72,7 +72,8 @@ const AdminPanel = () => {
   const [currentEvaluation, setCurrentEvaluation] = useState(null);
   const [newPartialScore, setNewPartialScore] = useState({
     name: '',
-    score: ''
+    score: '',
+    feedback: '' 
   });
   
   // Bulk CSV upload dialog state
@@ -194,8 +195,7 @@ const loadData = async () => {
     setIsEvalDialogOpen(true);
   };
 
-  // NEW: Handle adding a new partial score
-  const handleAddPartialScore = async (e) => {
+const handleAddPartialScore = async (e) => {
     e.preventDefault();
     if (!newPartialScore.name || !newPartialScore.score) {
       showMessage('Please fill in both evaluation name and score.', true);
@@ -210,14 +210,24 @@ const loadData = async () => {
 
     setLoading(true);
     
-    const success = await addPartialScore(currentEvaluation.studentEmail, newPartialScore.name, score);
+    // UPDATED: Pass the new feedback text to the function
+    const success = await addPartialScore(
+      currentEvaluation.studentEmail, 
+      newPartialScore.name, 
+      score, 
+      newPartialScore.feedback // Pass feedback from state
+    );
     
     if (success) {
       await loadData();
-      // Refresh current evaluation data
-      const updatedEval = evaluations.find(e => e.studentEmail === currentEvaluation.studentEmail);
-      setCurrentEvaluation(updatedEval || currentEvaluation);
-      setNewPartialScore({ name: '', score: '' });
+      // Refresh current evaluation data after a short delay to ensure data consistency
+      setTimeout(() => {
+        const updatedEval = evaluations.find(e => e.studentEmail === currentEvaluation.studentEmail);
+        setCurrentEvaluation(updatedEval || currentEvaluation);
+      }, 500);
+      
+      // UPDATED: Reset the feedback field as well
+      setNewPartialScore({ name: '', score: '', feedback: '' });
       showMessage('Partial score added successfully!');
     } else {
       showMessage('Failed to add partial score. Please try again.', true);
@@ -1379,6 +1389,16 @@ const loadData = async () => {
                       required
                     />
                   </div>
+                <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Feedback (Optional)
+                </label>
+                <Textarea
+                  placeholder="e.g., Excellent work on the presentation."
+                  value={newPartialScore.feedback}
+                  onChange={(e) => setNewPartialScore({ ...newPartialScore, feedback: e.target.value })}
+                />
+              </div>
                 </div>
                 <Button type="submit" disabled={loading} className="w-full">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}

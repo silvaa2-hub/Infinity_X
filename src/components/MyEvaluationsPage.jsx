@@ -4,7 +4,7 @@ import { getStudentEvaluation } from '../lib/auth';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Link } from 'react-router-dom';
-import { ArrowLeft, Award, Star, MessageSquare, AlertCircle, Calendar, TrendingUp, BarChart3 } from 'lucide-react';
+import { ArrowLeft, Award, Star, MessageSquare, AlertCircle, Calendar, TrendingUp, BarChart3, CheckCircle, XCircle, Lightbulb, Target, BookOpen, Video, ExternalLink } from 'lucide-react';
 import { CircularProgressbar, buildStyles } from 'react-circular-progressbar';
 import 'react-circular-progressbar/dist/styles.css';
 
@@ -55,6 +55,188 @@ const MyEvaluationsPage = () => {
   // Function to get the display score (totalScore for new format, score for old format)
   const getDisplayScore = (evaluation) => {
     return evaluation?.totalScore !== undefined ? evaluation.totalScore : (evaluation?.score || 0);
+  };
+
+  // Component to render text with clickable links
+  const TextWithLinks = ({ text, className = "" }) => {
+    if (!text) return null;
+
+    // Enhanced URL regex that captures complete URLs
+    const urlRegex = /(https?:\/\/[^\s\]]+)/g;
+    const parts = text.split(urlRegex);
+
+    return (
+      <span className={className}>
+        {parts.map((part, index) => {
+          if (urlRegex.test(part)) {
+            return (
+              <a
+                key={index}
+                href={part}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-blue-400 hover:text-blue-300 underline inline-flex items-center gap-1 break-all"
+              >
+                {part}
+                <ExternalLink className="w-3 h-3 flex-shrink-0" />
+              </a>
+            );
+          }
+          return part;
+        })}
+      </span>
+    );
+  };
+
+  // Enhanced feedback parser that preserves URLs
+  const parseFeedback = (feedback) => {
+    if (!feedback) return null;
+
+    const sections = {
+      strengths: [],
+      weaknesses: [],
+      suggestions: [],
+      resources: []
+    };
+
+    // First, let's split by common delimiters but preserve URLs
+    // Split by periods, but be careful with URLs
+    const sentences = feedback.split(/(?<!\w\.\w.)(?<![A-Z][a-z]\.)(?<=\.|\!|\?)\s+/).filter(s => s.trim().length > 0);
+    
+    sentences.forEach(sentence => {
+      const trimmed = sentence.trim();
+      if (!trimmed) return;
+
+      // Look for strength indicators
+      if (trimmed.toLowerCase().includes('strength') || 
+          trimmed.toLowerCase().includes('well-organized') ||
+          trimmed.toLowerCase().includes('clear') ||
+          trimmed.toLowerCase().includes('readable') ||
+          trimmed.toLowerCase().includes('correctly') ||
+          trimmed.toLowerCase().includes('good') ||
+          trimmed.toLowerCase().includes('excellent') ||
+          trimmed.toLowerCase().includes('completed sections') ||
+          trimmed.toLowerCase().includes('clean') ||
+          trimmed.toLowerCase().includes('understanding')) {
+        sections.strengths.push(trimmed);
+      }
+      // Look for weakness indicators
+      else if (trimmed.toLowerCase().includes('weakness') ||
+               trimmed.toLowerCase().includes('error') ||
+               trimmed.toLowerCase().includes('minor') ||
+               trimmed.toLowerCase().includes('issue') ||
+               trimmed.toLowerCase().includes('problem') ||
+               trimmed.toLowerCase().includes('misunderstood')) {
+        sections.weaknesses.push(trimmed);
+      }
+      // Look for resource/video indicators (prioritize this before suggestions)
+      else if (trimmed.toLowerCase().includes('video') ||
+               trimmed.toLowerCase().includes('resource') ||
+               trimmed.toLowerCase().includes('http') ||
+               trimmed.toLowerCase().includes('www') ||
+               trimmed.toLowerCase().includes('youtube') ||
+               trimmed.toLowerCase().includes('geeksforgeeks')) {
+        sections.resources.push(trimmed);
+      }
+      // Look for suggestion indicators
+      else if (trimmed.toLowerCase().includes('suggest') ||
+               trimmed.toLowerCase().includes('recommend') ||
+               trimmed.toLowerCase().includes('should') ||
+               trimmed.toLowerCase().includes('could') ||
+               trimmed.toLowerCase().includes('particularly') ||
+               trimmed.toLowerCase().includes('did not provide')) {
+        sections.suggestions.push(trimmed);
+      }
+      // Default to suggestions if no clear category
+      else {
+        sections.suggestions.push(trimmed);
+      }
+    });
+
+    return sections;
+  };
+
+  // Enhanced feedback display component
+  const FeedbackDisplay = ({ feedback }) => {
+    const parsedFeedback = parseFeedback(feedback);
+    
+    if (!parsedFeedback) return null;
+
+    return (
+      <div className="mt-4 space-y-4">
+        {/* Strengths */}
+        {parsedFeedback.strengths.length > 0 && (
+          <div className="bg-green-900/20 border border-green-700/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <CheckCircle className="w-5 h-5 text-green-400" />
+              <h4 className="font-semibold text-green-300">Strengths</h4>
+            </div>
+            <ul className="space-y-2">
+              {parsedFeedback.strengths.map((strength, idx) => (
+                <li key={idx} className="text-green-100 text-sm flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-green-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <TextWithLinks text={strength} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Weaknesses */}
+        {parsedFeedback.weaknesses.length > 0 && (
+          <div className="bg-orange-900/20 border border-orange-700/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <AlertCircle className="w-5 h-5 text-orange-400" />
+              <h4 className="font-semibold text-orange-300">Areas for Improvement</h4>
+            </div>
+            <ul className="space-y-2">
+              {parsedFeedback.weaknesses.map((weakness, idx) => (
+                <li key={idx} className="text-orange-100 text-sm flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-orange-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <TextWithLinks text={weakness} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Suggestions */}
+        {parsedFeedback.suggestions.length > 0 && (
+          <div className="bg-blue-900/20 border border-blue-700/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Lightbulb className="w-5 h-5 text-blue-400" />
+              <h4 className="font-semibold text-blue-300">Recommendations</h4>
+            </div>
+            <ul className="space-y-2">
+              {parsedFeedback.suggestions.map((suggestion, idx) => (
+                <li key={idx} className="text-blue-100 text-sm flex items-start gap-2">
+                  <div className="w-1.5 h-1.5 bg-blue-400 rounded-full mt-2 flex-shrink-0"></div>
+                  <TextWithLinks text={suggestion} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+
+        {/* Resources */}
+        {parsedFeedback.resources.length > 0 && (
+          <div className="bg-purple-900/20 border border-purple-700/30 rounded-lg p-4">
+            <div className="flex items-center gap-2 mb-3">
+              <BookOpen className="w-5 h-5 text-purple-400" />
+              <h4 className="font-semibold text-purple-300">Resources</h4>
+            </div>
+            <ul className="space-y-3">
+              {parsedFeedback.resources.map((resource, idx) => (
+                <li key={idx} className="text-purple-100 text-sm flex items-start gap-2">
+                  <Video className="w-4 h-4 text-purple-400 mt-0.5 flex-shrink-0" />
+                  <TextWithLinks text={resource} />
+                </li>
+              ))}
+            </ul>
+          </div>
+        )}
+      </div>
+    );
   };
 
   if (loading) {
@@ -151,35 +333,51 @@ const MyEvaluationsPage = () => {
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-6">
                       {evaluation.partialScores
                         .sort((a, b) => new Date(b.date) - new Date(a.date)) // Sort by date, newest first
                         .map((partial, index) => (
-                        <div key={index} className="flex items-center justify-between p-4 bg-slate-800/30 rounded-lg border border-slate-700/30">
-                          <div className="flex-1">
-                            <h3 className="font-semibold text-slate-200 mb-1">{partial.name}</h3>
-                            <div className="flex items-center gap-4 text-sm text-slate-400">
-                              <span className="flex items-center gap-1">
-                                <Calendar className="w-3 h-3" />
-                                {partial.date}
-                              </span>
+                        <div key={index} className="bg-slate-800/30 rounded-lg border border-slate-700/30 overflow-hidden">
+                          {/* Header with score and basic info */}
+                          <div className="flex items-center justify-between p-4">
+                            <div className="flex-1">
+                              <h3 className="font-semibold text-slate-200 mb-1">{partial.name}</h3>
+                              <div className="flex items-center gap-4 text-sm text-slate-400">
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-3 h-3" />
+                                  {partial.date}
+                                </span>
+                              </div>
+                            </div>
+                            <div className="text-right">
+                              <div className={`text-2xl font-bold ${getScoreColorClass(partial.score)}`}>
+                                {partial.score}%
+                              </div>
+                              {/* Progress bar for individual score */}
+                              <div className="w-24 h-2 bg-slate-700 rounded-full mt-2">
+                                <div 
+                                  className="h-full rounded-full transition-all duration-300"
+                                  style={{
+                                    width: `${partial.score}%`,
+                                    backgroundColor: getScoreColor(partial.score)
+                                  }}
+                                />
+                              </div>
                             </div>
                           </div>
-                          <div className="text-right">
-                            <div className={`text-2xl font-bold ${getScoreColorClass(partial.score)}`}>
-                              {partial.score}%
+                          
+                          {/* Enhanced Feedback Display */}
+                          {partial.feedback && (
+                            <div className="px-4 pb-4">
+                              <div className="border-t border-slate-700/50 pt-4">
+                                <div className="flex items-center gap-2 mb-3">
+                                  <MessageSquare className="w-4 h-4 text-slate-400" />
+                                  <h4 className="font-medium text-slate-300">Detailed Feedback</h4>
+                                </div>
+                                <FeedbackDisplay feedback={partial.feedback} />
+                              </div>
                             </div>
-                            {/* Progress bar for individual score */}
-                            <div className="w-24 h-2 bg-slate-700 rounded-full mt-2">
-                              <div 
-                                className="h-full rounded-full transition-all duration-300"
-                                style={{
-                                  width: `${partial.score}%`,
-                                  backgroundColor: getScoreColor(partial.score)
-                                }}
-                              />
-                            </div>
-                          </div>
+                          )}
                         </div>
                       ))}
                     </div>
@@ -236,7 +434,7 @@ const MyEvaluationsPage = () => {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <p className="text-slate-300 text-lg whitespace-pre-wrap leading-relaxed">{evaluation.feedback}</p>
+                    <FeedbackDisplay feedback={evaluation.feedback} />
                   </CardContent>
                 </Card>
               )}

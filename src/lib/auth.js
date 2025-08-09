@@ -134,7 +134,7 @@ export const updateStudentEvaluation = async (evaluationData) => {
 };
 
 // Adds a new partial score to a student's evaluation
-export const addPartialScore = async (studentEmail, scoreName, scoreValue) => {
+export const addPartialScore = async (studentEmail, scoreName, scoreValue, feedbackText) => {
   try {
     const evaluationRef = doc(db, 'evaluations', studentEmail);
     
@@ -157,11 +157,12 @@ export const addPartialScore = async (studentEmail, scoreName, scoreValue) => {
         }
       }
       
-      // Add new partial score with unique ID and current date
+      // Add new partial score with unique ID, current date, and feedback
       const newPartialScore = {
         id: Date.now().toString(), // Use timestamp as unique ID
         name: scoreName,
         score: parseFloat(scoreValue),
+        feedback: feedbackText, // ADDED THIS LINE
         date: new Date().toISOString().split('T')[0] // YYYY-MM-DD format
       };
       
