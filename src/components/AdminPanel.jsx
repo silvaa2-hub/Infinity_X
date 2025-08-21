@@ -56,7 +56,8 @@ import {
   Target,
   X,
   BookOpen,
-  Download 
+  Download,
+  Lightbulb // NEW: Icon for Tips & Shorts
 } from 'lucide-react';
 import Papa from 'papaparse'; // Import PapaParse
 
@@ -100,7 +101,8 @@ const AdminPanel = () => {
     materials: [],
     links: [],
     notes: [],
-    homeworks: [] // NEW: Add homeworks array
+    homeworks: [], // NEW: Add homeworks array
+    tips: [] // NEW: Add tips array for Tips & Shorts
   });
   
   // Form states for adding new content
@@ -109,6 +111,7 @@ const AdminPanel = () => {
   const [newLink, setNewLink] = useState({ title: '', description: '', url: '' });
   const [newNote, setNewNote] = useState({ title: '', content: '', date: '' });
   const [newHomework, setNewHomework] = useState({ title: '', description: '', url: '', dueDate: '' }); // NEW: Homework form state
+  const [newTip, setNewTip] = useState({ title: '', description: '', videoUrl: '' }); // NEW: Tips form state
 
   const fileInputRef = useRef(null); // Ref for the hidden file input
 
@@ -438,6 +441,31 @@ const handleAddPartialScore = async (e) => {
     setLoading(false);
   };
 
+  // NEW: Handle adding tip
+  const handleAddTip = async (e) => {
+    e.preventDefault();
+    if (!newTip.title || !newTip.description || !newTip.videoUrl) return;
+
+    const updatedContent = {
+      ...content,
+      tips: [...(content.tips || []), { 
+        ...newTip, 
+        id: Date.now().toString()
+      }]
+    };
+
+    setLoading(true);
+    const success = await updateDashboardContent(updatedContent);
+    if (success) {
+      setContent(updatedContent);
+      setNewTip({ title: '', description: '', videoUrl: '' });
+      showMessage('Tip added successfully!');
+    } else {
+      showMessage('Failed to add tip. Please try again.', true);
+    }
+    setLoading(false);
+  };
+
   const handleRemoveItem = async (type, itemId) => {
     const updatedContent = {
       ...content,
@@ -480,13 +508,14 @@ const handleAddPartialScore = async (e) => {
       indigo: isActive ? 'bg-indigo-100 border-indigo-300 text-indigo-700 shadow-md' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50',
       teal: isActive ? 'bg-teal-100 border-teal-300 text-teal-700 shadow-md' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50',
       amber: isActive ? 'bg-amber-100 border-amber-300 text-amber-700 shadow-md' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50',
-      cyan: isActive ? 'bg-cyan-100 border-cyan-300 text-cyan-700 shadow-md' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
+      cyan: isActive ? 'bg-cyan-100 border-cyan-300 text-cyan-700 shadow-md' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50',
+      orange: isActive ? 'bg-orange-100 border-orange-300 text-orange-700 shadow-md' : 'bg-white border-gray-200 text-gray-600 hover:bg-gray-50'
     };
 
     return (
       <button
         onClick={() => onClick(value)}
-        className={`flex items-center space-x-2 px-4 py-2 rounded-lg border transition-all duration-200 ${colorClasses[colorScheme]}`}
+        className={`flex items-center space-x-2 px-4 py-2 rounded-lg border-2 transition-all duration-200 font-medium text-sm ${colorClasses[colorScheme]}`}
       >
         <Icon className="w-4 h-4" />
         <span>{children}</span>
@@ -827,27 +856,29 @@ const handleAddPartialScore = async (e) => {
                 <span>Important Links</span>
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Manage important external links and resources
+                Manage important links and resources
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <form onSubmit={handleAddLink} className="space-y-4 mb-6">
-                <Input
-                  placeholder="Link title"
-                  value={newLink.title}
-                  onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
-                  className="border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    placeholder="Link title"
+                    value={newLink.title}
+                    onChange={(e) => setNewLink({ ...newLink, title: e.target.value })}
+                    className="border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
+                  />
+                  <Input
+                    placeholder="URL"
+                    value={newLink.url}
+                    onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
+                    className="border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
+                  />
+                </div>
                 <Textarea
                   placeholder="Link description"
                   value={newLink.description}
                   onChange={(e) => setNewLink({ ...newLink, description: e.target.value })}
-                  className="border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
-                />
-                <Input
-                  placeholder="URL"
-                  value={newLink.url}
-                  onChange={(e) => setNewLink({ ...newLink, url: e.target.value })}
                   className="border-gray-300 focus:border-cyan-500 focus:ring-cyan-500"
                 />
                 <Button type="submit" disabled={loading} className="bg-cyan-600 hover:bg-cyan-700 text-white">
@@ -861,16 +892,17 @@ const handleAddPartialScore = async (e) => {
                   <div key={link.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-cyan-50/50 rounded-lg border border-cyan-200 hover:bg-cyan-100/50 transition-colors">
                     <div className="flex-1">
                       <h3 className="font-medium text-gray-800 mb-1">{link.title}</h3>
-                      <p className="text-sm text-gray-600">{link.description}</p>
+                      <p className="text-sm text-gray-600 mb-2">{link.description}</p>
+                      <a href={link.url} target="_blank" rel="noopener noreferrer" className="text-xs text-cyan-600 hover:text-cyan-700 break-all">
+                        {link.url}
+                      </a>
                     </div>
                     <div className="flex items-center space-x-2 mt-3 sm:mt-0">
-                      {link.url && (
-                        <a href={link.url} target="_blank" rel="noopener noreferrer">
-                          <Button variant="outline" size="sm">
-                            <ExternalLink className="w-4 h-4" />
-                          </Button>
-                        </a>
-                      )}
+                      <a href={link.url} target="_blank" rel="noopener noreferrer">
+                        <Button variant="outline" size="sm">
+                          <ExternalLink className="w-4 h-4" />
+                        </Button>
+                      </a>
                       <Button
                         onClick={() => handleRemoveItem('links', link.id)}
                         variant="destructive"
@@ -900,7 +932,7 @@ const handleAddPartialScore = async (e) => {
             <CardHeader className="bg-gradient-to-r from-indigo-50 to-purple-50 rounded-t-lg">
               <CardTitle className="flex items-center space-x-2 text-gray-800">
                 <StickyNote className="w-5 h-5 text-indigo-600" />
-                <span>Notes</span>
+                <span>Instructor Notes</span>
               </CardTitle>
               <CardDescription className="text-gray-600">
                 Manage instructor notes and announcements
@@ -918,8 +950,8 @@ const handleAddPartialScore = async (e) => {
                   placeholder="Note content"
                   value={newNote.content}
                   onChange={(e) => setNewNote({ ...newNote, content: e.target.value })}
-                  rows={4}
                   className="border-gray-300 focus:border-indigo-500 focus:ring-indigo-500"
+                  rows={4}
                 />
                 <Button type="submit" disabled={loading} className="bg-indigo-600 hover:bg-indigo-700 text-white">
                   {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
@@ -930,19 +962,20 @@ const handleAddPartialScore = async (e) => {
               <div className="space-y-3">
                 {content.notes && content.notes.map((note) => (
                   <div key={note.id} className="p-4 bg-indigo-50/50 rounded-lg border border-indigo-200 hover:bg-indigo-100/50 transition-colors">
-                    <div className="flex items-start justify-between mb-2">
-                      <h3 className="font-medium text-gray-800">{note.title}</h3>
-                      <div className="flex items-center space-x-2">
-                        <span className="text-xs text-gray-500">{note.date}</span>
-                        <Button
-                          onClick={() => handleRemoveItem('notes', note.id)}
-                          variant="destructive"
-                          size="sm"
-                          disabled={loading}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
+                    <div className="flex flex-col sm:flex-row sm:items-start justify-between mb-3">
+                      <div className="flex-1">
+                        <h3 className="font-medium text-gray-800 mb-1">{note.title}</h3>
+                        <p className="text-xs text-gray-500 mb-2">Posted: {note.date}</p>
                       </div>
+                      <Button
+                        onClick={() => handleRemoveItem('notes', note.id)}
+                        variant="destructive"
+                        size="sm"
+                        disabled={loading}
+                        className="mt-2 sm:mt-0"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
                     </div>
                     <p className="text-sm text-gray-600 whitespace-pre-wrap">{note.content}</p>
                   </div>
@@ -959,47 +992,48 @@ const handleAddPartialScore = async (e) => {
           </Card>
         );
 
-      // NEW: Homework case
       case 'homework':
         return (
           <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
-            <CardHeader className="bg-gradient-to-r from-amber-50 to-orange-50 rounded-t-lg">
+            <CardHeader className="bg-gradient-to-r from-amber-50 to-yellow-50 rounded-t-lg">
               <CardTitle className="flex items-center space-x-2 text-gray-800">
                 <BookOpen className="w-5 h-5 text-amber-600" />
-                <span>Homework</span>
+                <span>Homework Assignments</span>
               </CardTitle>
               <CardDescription className="text-gray-600">
-                Manage homework assignments for students
+                Manage homework assignments and due dates
               </CardDescription>
             </CardHeader>
             <CardContent className="p-6">
               <form onSubmit={handleAddHomework} className="space-y-4 mb-6">
-                <Input
-                  placeholder="Homework title (e.g., Homework 1: Introduction to Python)"
-                  value={newHomework.title}
-                  onChange={(e) => setNewHomework({ ...newHomework, title: e.target.value })}
-                  className="border-gray-300 focus:border-amber-500 focus:ring-amber-500"
-                  required
-                />
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    placeholder="Assignment title"
+                    value={newHomework.title}
+                    onChange={(e) => setNewHomework({ ...newHomework, title: e.target.value })}
+                    className="border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                    required
+                  />
+                  <Input
+                    type="date"
+                    placeholder="Due date"
+                    value={newHomework.dueDate}
+                    onChange={(e) => setNewHomework({ ...newHomework, dueDate: e.target.value })}
+                    className="border-gray-300 focus:border-amber-500 focus:ring-amber-500"
+                    required
+                  />
+                </div>
                 <Textarea
-                  placeholder="Homework description (e.g., Complete the first 5 exercises on the linked platform.)"
+                  placeholder="Assignment description"
                   value={newHomework.description}
                   onChange={(e) => setNewHomework({ ...newHomework, description: e.target.value })}
                   className="border-gray-300 focus:border-amber-500 focus:ring-amber-500"
                   required
                 />
                 <Input
-                  placeholder="Homework URL (e.g., http://link.to.the.homework)"
+                  placeholder="Assignment URL or file link"
                   value={newHomework.url}
                   onChange={(e) => setNewHomework({ ...newHomework, url: e.target.value })}
-                  className="border-gray-300 focus:border-amber-500 focus:ring-amber-500"
-                  required
-                />
-                <Input
-                  type="date"
-                  placeholder="Due Date"
-                  value={newHomework.dueDate}
-                  onChange={(e) => setNewHomework({ ...newHomework, dueDate: e.target.value })}
                   className="border-gray-300 focus:border-amber-500 focus:ring-amber-500"
                   required
                 />
@@ -1049,6 +1083,97 @@ const handleAddPartialScore = async (e) => {
                     <BookOpen className="w-12 h-12 text-gray-400 mx-auto mb-4" />
                     <p className="text-gray-500 text-lg">No homework assignments yet</p>
                     <p className="text-gray-400 text-sm">Add your first homework assignment above</p>
+                  </div>
+                )}
+              </div>
+            </CardContent>
+          </Card>
+        );
+
+      // NEW: Tips & Shorts Tab
+      case 'tips':
+        return (
+          <Card className="shadow-xl border-0 bg-white/80 backdrop-blur-lg">
+            <CardHeader className="bg-gradient-to-r from-orange-50 to-yellow-50 rounded-t-lg">
+              <CardTitle className="flex items-center space-x-2 text-gray-800">
+                <Lightbulb className="w-5 h-5 text-orange-600" />
+                <span>Tips & Shorts</span>
+              </CardTitle>
+              <CardDescription className="text-gray-600">
+                Manage quick tips and short video content
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="p-6">
+              {/* Add New Tip Form */}
+              <form onSubmit={handleAddTip} className="space-y-4 mb-6">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Add New Tip</h3>
+                <Input
+                  placeholder="Tip title (e.g., Quick Tip: Solving the Python Loop Problem)"
+                  value={newTip.title}
+                  onChange={(e) => setNewTip({ ...newTip, title: e.target.value })}
+                  className="border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                  required
+                />
+                <Textarea
+                  placeholder="Tip description (e.g., A 2-minute video explaining a common error in for-loops.)"
+                  value={newTip.description}
+                  onChange={(e) => setNewTip({ ...newTip, description: e.target.value })}
+                  className="border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                  required
+                />
+                <Input
+                  placeholder="Video URL (e.g., https://youtube.com/shorts/your-video-id)"
+                  value={newTip.videoUrl}
+                  onChange={(e) => setNewTip({ ...newTip, videoUrl: e.target.value })}
+                  className="border-gray-300 focus:border-orange-500 focus:ring-orange-500"
+                  required
+                />
+                <Button type="submit" disabled={loading} className="bg-orange-600 hover:bg-orange-700 text-white">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                  <span className="ml-2">Add Tip</span>
+                </Button>
+              </form>
+
+              <Separator className="my-6" />
+
+              {/* Existing Tips List */}
+              <div className="space-y-3">
+                <h3 className="text-lg font-semibold text-gray-800 mb-3">Existing Tips</h3>
+                {content.tips && content.tips.map((tip) => (
+                  <div key={tip.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-4 bg-orange-50/50 rounded-lg border border-orange-200 hover:bg-orange-100/50 transition-colors">
+                    <div className="flex-1">
+                      <h4 className="font-medium text-gray-800 mb-1">{tip.title}</h4>
+                      <p className="text-sm text-gray-600 mb-2">{tip.description}</p>
+                      {tip.videoUrl && (
+                        <a href={tip.videoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-orange-600 hover:text-orange-700 break-all">
+                          {tip.videoUrl}
+                        </a>
+                      )}
+                    </div>
+                    <div className="flex items-center space-x-2 mt-3 sm:mt-0">
+                      {tip.videoUrl && (
+                        <a href={tip.videoUrl} target="_blank" rel="noopener noreferrer">
+                          <Button variant="outline" size="sm">
+                            <ExternalLink className="w-4 h-4" />
+                          </Button>
+                        </a>
+                      )}
+                      <Button
+                        onClick={() => handleRemoveItem('tips', tip.id)}
+                        variant="destructive"
+                        size="sm"
+                        disabled={loading}
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+                {(!content.tips || content.tips.length === 0) && (
+                  <div className="text-center py-12">
+                    <Lightbulb className="w-12 h-12 text-gray-400 mx-auto mb-4" />
+                    <p className="text-gray-500 text-lg">No tips yet</p>
+                    <p className="text-gray-400 text-sm">Add your first tip above</p>
                   </div>
                 )}
               </div>
@@ -1290,6 +1415,9 @@ const handleAddPartialScore = async (e) => {
           <TabButton value="homework" isActive={activeTab === 'homework'} onClick={setActiveTab} icon={BookOpen} colorScheme="amber">
             Homework
           </TabButton>
+          <TabButton value="tips" isActive={activeTab === 'tips'} onClick={setActiveTab} icon={Lightbulb} colorScheme="orange">
+            Tips & Shorts
+          </TabButton>
           <TabButton value="drive-sync" isActive={activeTab === 'drive-sync'} onClick={setActiveTab} icon={Cloud} colorScheme="teal">
             Drive Sync
           </TabButton>
@@ -1320,91 +1448,92 @@ const handleAddPartialScore = async (e) => {
 
           <div className="space-y-6">
             {/* Current Total Score */}
-            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-lg">
+            <div className="bg-gradient-to-r from-yellow-50 to-orange-50 p-4 rounded-lg border border-yellow-200">
               <h3 className="text-lg font-semibold text-gray-800 mb-2">Current Total Score</h3>
               <div className="text-3xl font-bold text-yellow-600">
                 {currentEvaluation?.totalScore || 0}
               </div>
+              <p className="text-sm text-gray-600 mt-1">
+                Based on {currentEvaluation?.partialScores?.length || 0} partial score(s)
+              </p>
+            </div>
+
+            {/* Add New Partial Score */}
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Add New Partial Score</h3>
+              <form onSubmit={handleAddPartialScore} className="space-y-4">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <Input
+                    placeholder="Evaluation name (e.g., Quiz 1, Project A)"
+                    value={newPartialScore.name}
+                    onChange={(e) => setNewPartialScore({ ...newPartialScore, name: e.target.value })}
+                    className="border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
+                  />
+                  <Input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.1"
+                    placeholder="Score (0-100)"
+                    value={newPartialScore.score}
+                    onChange={(e) => setNewPartialScore({ ...newPartialScore, score: e.target.value })}
+                    className="border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
+                  />
+                </div>
+                <Textarea
+                  placeholder="Feedback (optional)"
+                  value={newPartialScore.feedback}
+                  onChange={(e) => setNewPartialScore({ ...newPartialScore, feedback: e.target.value })}
+                  className="border-gray-300 focus:border-yellow-500 focus:ring-yellow-500"
+                  rows={3}
+                />
+                <Button type="submit" disabled={loading} className="bg-yellow-600 hover:bg-yellow-700 text-white">
+                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
+                  Add Partial Score
+                </Button>
+              </form>
             </div>
 
             {/* Existing Partial Scores */}
-            <div>
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">Partial Scores</h3>
-              {currentEvaluation?.partialScores && currentEvaluation.partialScores.length > 0 ? (
-                <div className="space-y-2">
-                  {currentEvaluation.partialScores.map((score) => (
-                    <div key={score.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg border">
+            <div className="bg-white p-4 rounded-lg border border-gray-200">
+              <h3 className="text-lg font-semibold text-gray-800 mb-4">Existing Partial Scores</h3>
+              <div className="space-y-3">
+                {currentEvaluation?.partialScores && currentEvaluation.partialScores.length > 0 ? (
+                  currentEvaluation.partialScores.map((score) => (
+                    <div key={score.id} className="flex flex-col sm:flex-row sm:items-center justify-between p-3 bg-gray-50 rounded-lg border border-gray-200">
                       <div className="flex-1">
-                        <div className="font-medium text-gray-800">{score.name}</div>
-                        <div className="text-sm text-gray-600">Score: {score.score} | Date: {score.date}</div>
+                        <div className="flex items-center space-x-2 mb-1">
+                          <h4 className="font-medium text-gray-800">{score.name}</h4>
+                          <Badge variant="secondary" className="bg-yellow-100 text-yellow-800">
+                            {score.score}
+                          </Badge>
+                        </div>
+                        {score.feedback && (
+                          <p className="text-sm text-gray-600">{score.feedback}</p>
+                        )}
+                        <p className="text-xs text-gray-500">
+                          Added: {score.createdAt ? new Date(score.createdAt.toDate()).toLocaleDateString() : 'Unknown'}
+                        </p>
                       </div>
                       <Button
                         onClick={() => handleDeletePartialScore(score.id)}
                         variant="destructive"
                         size="sm"
                         disabled={loading}
+                        className="mt-2 sm:mt-0 ml-0 sm:ml-2"
                       >
                         <Trash2 className="w-4 h-4" />
                       </Button>
                     </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="text-center py-8 text-gray-500">
-                  <Award className="w-12 h-12 text-gray-400 mx-auto mb-4" />
-                  <p>No partial scores yet</p>
-                </div>
-              )}
-            </div>
-
-            {/* Add New Partial Score */}
-            <div className="border-t pt-6">
-              <h3 className="text-lg font-semibold text-gray-800 mb-3">Add New Partial Score</h3>
-              <form onSubmit={handleAddPartialScore} className="space-y-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Evaluation Name
-                    </label>
-                    <Input
-                      type="text"
-                      placeholder="e.g., Quiz 1, Assignment 2"
-                      value={newPartialScore.name}
-                      onChange={(e) => setNewPartialScore({ ...newPartialScore, name: e.target.value })}
-                      required
-                    />
+                  ))
+                ) : (
+                  <div className="text-center py-8">
+                    <Award className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                    <p className="text-gray-500">No partial scores yet</p>
+                    <p className="text-gray-400 text-sm">Add the first partial score above</p>
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Score (0-100)
-                    </label>
-                    <Input
-                      type="number"
-                      min="0"
-                      max="100"
-                      step="0.01"
-                      placeholder="85"
-                      value={newPartialScore.score}
-                      onChange={(e) => setNewPartialScore({ ...newPartialScore, score: e.target.value })}
-                      required
-                    />
-                  </div>
-                <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Feedback (Optional)
-                </label>
-                <Textarea
-                  placeholder="e.g., Excellent work on the presentation."
-                  value={newPartialScore.feedback}
-                  onChange={(e) => setNewPartialScore({ ...newPartialScore, feedback: e.target.value })}
-                />
+                )}
               </div>
-                </div>
-                <Button type="submit" disabled={loading} className="w-full">
-                  {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                  Add Partial Score
-                </Button>
-              </form>
             </div>
           </div>
 
@@ -1416,7 +1545,7 @@ const handleAddPartialScore = async (e) => {
         </DialogContent>
       </Dialog>
 
-      {/* Bulk CSV Upload Dialog */}
+      {/* Bulk Upload Dialog */}
       <Dialog open={isBulkUploadDialogOpen} onOpenChange={setIsBulkUploadDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
@@ -1425,41 +1554,42 @@ const handleAddPartialScore = async (e) => {
               <span>Bulk Add Scores</span>
             </DialogTitle>
             <DialogDescription>
-              Upload a CSV file with student emails and scores. The CSV should have 'email' and 'score' columns.
+              Upload a CSV file to add scores for multiple students at once.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Evaluation Name
               </label>
               <Input
-                type="text"
-                placeholder="e.g., Quiz 3, Final Exam"
+                placeholder="e.g., Midterm Exam"
                 value={bulkEvaluationName}
                 onChange={(e) => setBulkEvaluationName(e.target.value)}
+                className="border-gray-300 focus:border-green-500 focus:ring-green-500"
                 required
               />
             </div>
             
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 CSV File
               </label>
-              <Input
+              <input
+                ref={fileInputRef}
                 type="file"
                 accept=".csv"
                 onChange={(e) => setCsvFile(e.target.files[0])}
+                className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-green-50 file:text-green-700 hover:file:bg-green-100"
                 required
               />
             </div>
             
-            <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded">
-              <strong>CSV Format:</strong><br />
-              email,score<br />
-              student1@example.com,85<br />
-              student2@example.com,92
+            <div className="text-sm text-gray-600 bg-gray-50 p-3 rounded border border-gray-200">
+              <strong>CSV Format:</strong> The file should have columns "email" and "score". Example:
+              <br />
+              <code className="text-xs">email,score<br />student1@example.com,85<br />student2@example.com,92</code>
             </div>
           </div>
 
@@ -1467,7 +1597,11 @@ const handleAddPartialScore = async (e) => {
             <Button variant="outline" onClick={() => setIsBulkUploadDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleBulkUploadSubmit} disabled={loading || !csvFile || !bulkEvaluationName.trim()}>
+            <Button 
+              onClick={handleBulkUploadSubmit} 
+              disabled={loading || !csvFile || !bulkEvaluationName.trim()}
+              className="bg-green-600 hover:bg-green-700 text-white"
+            >
               {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Upload className="w-4 h-4 mr-2" />}
               Upload Scores
             </Button>
@@ -1481,23 +1615,23 @@ const handleAddPartialScore = async (e) => {
           <DialogHeader>
             <DialogTitle className="flex items-center space-x-2">
               <Trash2 className="w-5 h-5 text-red-600" />
-              <span>Bulk Delete a Score</span>
+              <span>Bulk Delete Scores</span>
             </DialogTitle>
             <DialogDescription>
-              Delete a specific evaluation (by name) from ALL students. This action cannot be undone.
+              Remove a specific evaluation from all students who have it.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">
+              <label className="block text-sm font-medium text-gray-700 mb-2">
                 Evaluation Name to Delete
               </label>
               <Input
-                type="text"
-                placeholder="e.g., Quiz 1, Assignment 2"
+                placeholder="e.g., Quiz 1"
                 value={bulkDeleteScoreName}
                 onChange={(e) => setBulkDeleteScoreName(e.target.value)}
+                className="border-gray-300 focus:border-red-500 focus:ring-red-500"
                 required
               />
             </div>

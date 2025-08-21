@@ -31,7 +31,8 @@ import {
   UploadCloud,
   Menu,
   MessageSquare,
-  Target // Icon for Homework
+  Target, // Icon for Homework
+  Lightbulb // NEW: Icon for Tips & Shorts
 } from 'lucide-react';
 
 const StudentDashboard = () => {
@@ -41,7 +42,8 @@ const StudentDashboard = () => {
     materials: [],
     links: [],
     notes: [],
-    homeworks: [] // NEW: Add homeworks array
+    homeworks: [], // NEW: Add homeworks array
+    tips: [] // NEW: Add tips array for Tips & Shorts
   });
   const [loading, setLoading] = useState(true);
 
@@ -163,8 +165,8 @@ const StudentDashboard = () => {
 
         {/* Tabs */}
         <Tabs defaultValue="lectures" className="w-full animate-in fade-in slide-in-from-top-8 duration-500">
-          {/* Tab List - Responsive - Updated to include Homework */}
-          <TabsList className="bg-slate-800/50 border border-slate-700 w-full grid grid-cols-2 sm:grid-cols-5 gap-1 h-auto p-1">
+          {/* Tab List - Responsive - Updated to include Homework and Tips & Shorts */}
+          <TabsList className="bg-slate-800/50 border border-slate-700 w-full grid grid-cols-2 sm:grid-cols-6 gap-1 h-auto p-1">
             <TabsTrigger 
               value="lectures" 
               className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 text-slate-300 py-2 px-1 text-xs sm:text-sm"
@@ -185,6 +187,13 @@ const StudentDashboard = () => {
             >
               <Target className="w-3 h-3 sm:w-4 sm:h-4" />
               <span className="text-center leading-tight">Homework<br className="sm:hidden" /> Assignments</span>
+            </TabsTrigger>
+            <TabsTrigger 
+              value="tips" 
+              className="flex flex-col sm:flex-row items-center justify-center space-y-1 sm:space-y-0 sm:space-x-2 text-slate-300 py-2 px-1 text-xs sm:text-sm"
+            >
+              <Lightbulb className="w-3 h-3 sm:w-4 sm:h-4" />
+              <span className="text-center leading-tight">Tips &<br className="sm:hidden" /> Shorts</span>
             </TabsTrigger>
             <TabsTrigger 
               value="links" 
@@ -308,24 +317,24 @@ const StudentDashboard = () => {
                     <CardHeader className="pb-3 p-4 sm:p-6">
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between space-y-2 sm:space-y-0">
                         <div className="flex-1 min-w-0">
-                          <CardTitle className="text-base sm:text-lg flex items-center space-x-2 text-slate-50 break-words">
-                            <Target className="w-4 h-4 sm:w-5 sm:h-5 text-amber-400 flex-shrink-0" />
-                            <span className="min-w-0">{homework.title}</span>
-                          </CardTitle>
+                          <CardTitle className="text-base sm:text-lg text-slate-50 break-words">{homework.title}</CardTitle>
                           <CardDescription className="mt-1 text-slate-400 text-sm break-words">{homework.description}</CardDescription>
                         </div>
+                        <Badge variant="outline" className="border-amber-600 text-amber-300 text-xs self-start sm:ml-2 flex-shrink-0">
+                          Due: {homework.dueDate}
+                        </Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6 pt-0">
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
                         <div className="flex items-center space-x-2 text-sm text-slate-400">
                           <Calendar className="w-4 h-4 flex-shrink-0" />
-                          <span className="truncate">Due: {homework.dueDate || 'No due date'}</span>
+                          <span className="truncate">Due: {homework.dueDate}</span>
                         </div>
                         <a href={homework.url} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
                           <Button size="sm" className="flex items-center justify-center space-x-2 bg-amber-600 hover:bg-amber-700 text-white w-full sm:w-auto">
                             <ExternalLink className="w-4 h-4" />
-                            <span>Start Assignment</span>
+                            <span>View Assignment</span>
                           </Button>
                         </a>
                       </div>
@@ -337,7 +346,51 @@ const StudentDashboard = () => {
                   <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center p-4">
                     <Target className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mb-4" />
                     <h3 className="text-base sm:text-lg font-semibold text-slate-300">No Homework Available</h3>
-                    <p className="text-slate-500 text-sm sm:text-base">New homework assignments will appear here when available.</p>
+                    <p className="text-slate-500 text-sm sm:text-base">Homework assignments will appear here when assigned.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
+          </TabsContent>
+
+          {/* NEW: Tips & Shorts Tab */}
+          <TabsContent value="tips" className="mt-4 sm:mt-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              {content.tips && content.tips.length > 0 ? (
+                content.tips.map((tip, index) => (
+                  <Card 
+                    key={index} 
+                    className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white hover:border-slate-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-4" 
+                    style={{animationDelay: `${index * 100}ms`}}
+                  >
+                    <CardHeader className="pb-3 p-4 sm:p-6">
+                      <CardTitle className="text-base sm:text-lg flex items-center space-x-2 text-slate-50 break-words">
+                        <Lightbulb className="w-4 h-4 sm:w-5 sm:h-5 text-orange-400 flex-shrink-0" />
+                        <span className="min-w-0">{tip.title}</span>
+                      </CardTitle>
+                      <CardDescription className="text-slate-400 text-sm break-words">{tip.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6 pt-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+                        <Badge variant="outline" className="border-orange-600 text-orange-300 text-xs self-start">
+                          Quick Tip
+                        </Badge>
+                        <a href={tip.videoUrl} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+                          <Button size="sm" className="flex items-center justify-center space-x-2 bg-orange-600 hover:bg-orange-700 text-white w-full sm:w-auto">
+                            <Play className="w-4 h-4" />
+                            <span>Watch</span>
+                          </Button>
+                        </a>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card className="lg:col-span-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800">
+                  <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center p-4">
+                    <Lightbulb className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mb-4" />
+                    <h3 className="text-base sm:text-lg font-semibold text-slate-300">No Tips Available</h3>
+                    <p className="text-slate-500 text-sm sm:text-base">Quick tips and short videos will appear here soon!</p>
                   </CardContent>
                 </Card>
               )}
@@ -346,66 +399,73 @@ const StudentDashboard = () => {
 
           {/* Links Tab */}
           <TabsContent value="links" className="mt-4 sm:mt-6">
-            <Card className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white">
-              <CardContent className="p-3 sm:p-4">
-                {content.links && content.links.length > 0 ? (
-                  <div className="space-y-2 sm:space-y-3">
-                    {content.links.map((link, index) => (
-                      <div key={index}>
-                        <a 
-                          href={link.url} 
-                          target="_blank" 
-                          rel="noopener noreferrer" 
-                          className="flex items-center space-x-3 p-3 rounded-lg hover:bg-slate-800 transition-colors group"
-                        >
-                          <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-green-400 flex-shrink-0" />
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-slate-50 group-hover:text-green-400 text-sm sm:text-base break-words">{link.title}</p>
-                            {link.description && (
-                              <p className="text-xs sm:text-sm text-slate-400 break-words">{link.description}</p>
-                            )}
-                          </div>
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
+              {content.links && content.links.length > 0 ? (
+                content.links.map((link, index) => (
+                  <Card 
+                    key={index} 
+                    className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white hover:border-slate-500 hover:shadow-xl transition-all duration-300 transform hover:-translate-y-1 animate-in fade-in slide-in-from-bottom-4" 
+                    style={{animationDelay: `${index * 100}ms`}}
+                  >
+                    <CardHeader className="pb-3 p-4 sm:p-6">
+                      <CardTitle className="text-base sm:text-lg flex items-center space-x-2 text-slate-50 break-words">
+                        <ExternalLink className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400 flex-shrink-0" />
+                        <span className="min-w-0">{link.title}</span>
+                      </CardTitle>
+                      <CardDescription className="text-slate-400 text-sm break-words">{link.description}</CardDescription>
+                    </CardHeader>
+                    <CardContent className="p-4 sm:p-6 pt-0">
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between space-y-3 sm:space-y-0">
+                        <Badge variant="outline" className="border-cyan-600 text-cyan-300 text-xs self-start">
+                          External Link
+                        </Badge>
+                        <a href={link.url} target="_blank" rel="noopener noreferrer" className="w-full sm:w-auto">
+                          <Button size="sm" variant="outline" className="flex items-center justify-center space-x-2 bg-slate-800 border-slate-600 hover:bg-slate-700 w-full sm:w-auto">
+                            <ExternalLink className="w-4 h-4" />
+                            <span>Visit</span>
+                          </Button>
                         </a>
-                        {index < content.links.length - 1 && (
-                          <Separator className="bg-slate-700/50 my-2 sm:my-3" />
-                        )}
                       </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="flex flex-col items-center justify-center py-8 sm:py-12 text-center">
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card className="lg:col-span-2 bg-slate-900/50 backdrop-blur-sm border border-slate-800">
+                  <CardContent className="flex flex-col items-center justify-center py-8 sm:py-12 text-center p-4">
                     <ExternalLink className="w-10 h-10 sm:w-12 sm:h-12 text-slate-600 mb-4" />
                     <h3 className="text-base sm:text-lg font-semibold text-slate-300">No Links Available</h3>
-                    <p className="text-slate-500 text-sm sm:text-base">Important links will be shared here as needed.</p>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+                    <p className="text-slate-500 text-sm sm:text-base">Important links and resources will be shared here.</p>
+                  </CardContent>
+                </Card>
+              )}
+            </div>
           </TabsContent>
 
           {/* Notes Tab */}
           <TabsContent value="notes" className="mt-4 sm:mt-6">
-            <div className="space-y-4 sm:space-y-6">
+            <div className="grid grid-cols-1 gap-4 sm:gap-6">
               {content.notes && content.notes.length > 0 ? (
                 content.notes.map((note, index) => (
                   <Card 
                     key={index} 
-                    className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white hover:border-slate-500 transition-all duration-300 animate-in fade-in slide-in-from-bottom-4" 
+                    className="bg-slate-900/50 backdrop-blur-sm border border-slate-700/50 text-white hover:border-slate-500 hover:shadow-xl transition-all duration-300 animate-in fade-in slide-in-from-bottom-4" 
                     style={{animationDelay: `${index * 100}ms`}}
                   >
                     <CardHeader className="pb-3 p-4 sm:p-6">
                       <div className="flex flex-col sm:flex-row sm:items-start justify-between space-y-2 sm:space-y-0">
-                        <CardTitle className="text-base sm:text-lg flex items-center space-x-2 text-slate-50 break-words">
-                          <StickyNote className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 flex-shrink-0" />
-                          <span className="min-w-0">{note.title}</span>
-                        </CardTitle>
+                        <div className="flex-1 min-w-0">
+                          <CardTitle className="text-base sm:text-lg flex items-center space-x-2 text-slate-50 break-words">
+                            <StickyNote className="w-4 h-4 sm:w-5 sm:h-5 text-indigo-400 flex-shrink-0" />
+                            <span className="min-w-0">{note.title}</span>
+                          </CardTitle>
+                        </div>
                         <Badge variant="outline" className="border-slate-600 text-slate-300 text-xs self-start sm:ml-2 flex-shrink-0">
-                          {note.date || 'No date'}
+                          {note.date}
                         </Badge>
                       </div>
                     </CardHeader>
                     <CardContent className="p-4 sm:p-6 pt-0">
-                      <p className="text-sm sm:text-base text-slate-300 whitespace-pre-wrap break-words">{note.content}</p>
+                      <p className="text-slate-300 text-sm sm:text-base whitespace-pre-wrap break-words">{note.content}</p>
                     </CardContent>
                   </Card>
                 ))
